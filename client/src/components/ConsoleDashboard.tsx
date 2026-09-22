@@ -31,23 +31,26 @@ export const ConsoleDashboard: React.FC = () => {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isMongoConnected, setIsMongoConnected] = useState(false);
 
-  // Initial Data Fetch
+  // Initial Data Fetch - Parallelized for instant loading
   const loadData = async () => {
     try {
-      const eps = await api.getEndpoints();
+      const [eps, health] = await Promise.all([
+        api.getEndpoints(),
+        api.getHealth().catch(() => ({ mongoConnected: false }))
+      ]);
       setEndpoints(eps);
-      if (eps.length > 0 && !selectedEndpoint) {
-        setSelectedEndpoint(eps[0]);
+      setIsMongoConnected(health.mongoConnected);
+
+      const firstEp = eps.length > 0 ? eps[0] : null;
+      if (firstEp && !selectedEndpoint) {
+        setSelectedEndpoint(firstEp);
       }
 
-      const evts = await api.getEvents(selectedEndpoint?.id);
+      const evts = await api.getEvents(firstEp?.id);
       setEvents(evts);
       if (evts.length > 0 && !selectedEvent) {
         setSelectedEvent(evts[0]);
       }
-
-      const health = await api.getHealth();
-      setIsMongoConnected(health.mongoConnected);
     } catch (err) {
       console.error('Failed to load initial HookFlow data:', err);
     }

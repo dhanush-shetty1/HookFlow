@@ -312,13 +312,13 @@ export const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#030304] text-zinc-100 font-sans relative overflow-x-hidden bg-noise scroll-smooth">
       {/* Calyx-style dark grid overlay */}
-      <div className="fixed inset-0 pointer-events-none z-0">
+      <div className="fixed inset-0 pointer-events-none z-0 transform-gpu will-change-transform">
         <div className="absolute inset-0 bg-grid-white opacity-[0.035] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_0%,black_30%,transparent_100%)]" />
       </div>
       <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="white" />
 
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
-      <header className="h-14 border-b border-zinc-800/80 bg-[#030304]/90 backdrop-blur-xl px-6 flex items-center justify-between sticky top-0 z-40">
+      <header className="h-14 border-b border-zinc-800/80 bg-[#030304]/90 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-40 transform-gpu">
         <div className="flex items-center gap-3">
           <span className="font-semibold text-sm tracking-tight text-zinc-100">Hookflow</span>
         </div>
