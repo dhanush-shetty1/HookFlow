@@ -1,0 +1,43 @@
+{
+  "name": "hookflow",
+  "version": "1.0.0",
+  "description": "Real-Time Webhook Proxy, Replayer & AI Schema Synthesizer",
+  "main": "server/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"cyan,magenta\" \"npm run server:dev\" \"npm run client:dev\"",
+    "server:dev": "tsx watch server/index.ts",
+    "client:dev": "npm run dev --prefix client",
+    "build": "npm run build --prefix client",
+    "start": "tsx server/index.ts"
+  },
+  "keywords": [
+    "webhook",
+    "proxy",
+    "replayer",
+    "schema-synthesizer",
+    "developer-tools"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@google/genai": "^0.1.2",
+    "axios": "^1.7.9",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mongoose": "^8.9.5",
+    "uuid": "^11.0.5",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.10",
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.5.14",
+    "concurrently": "^9.1.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
