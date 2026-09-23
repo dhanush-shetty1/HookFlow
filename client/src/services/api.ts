@@ -1,6 +1,14 @@
 import { Endpoint, WebhookEvent, SchemaSynthesisResult, MockWebhookTemplate, ForwardResponse } from '../types';
 
-const API_BASE = 'http://localhost:4000/api';
+const getApiBase = () => {
+  if (typeof window !== 'undefined') {
+    const isDev = window.location.hostname === 'localhost' && window.location.port === '3000';
+    return isDev ? 'http://localhost:4000/api' : `${window.location.origin}/api`;
+  }
+  return 'http://localhost:4000/api';
+};
+
+const API_BASE = getApiBase();
 
 export const api = {
   async getEndpoints(): Promise<Endpoint[]> {

@@ -65,8 +65,18 @@ export const ConsoleDashboard: React.FC = () => {
     let ws: WebSocket;
     let reconnectTimeout: any;
 
+    const getWsUrl = () => {
+      if (typeof window !== 'undefined') {
+        const isDev = window.location.hostname === 'localhost' && window.location.port === '3000';
+        if (isDev) return 'ws://localhost:4000';
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        return `${protocol}//${window.location.host}`;
+      }
+      return 'ws://localhost:4000';
+    };
+
     const connectWs = () => {
-      ws = new WebSocket('ws://localhost:4000');
+      ws = new WebSocket(getWsUrl());
       wsRef.current = ws;
 
       ws.onopen = () => {
