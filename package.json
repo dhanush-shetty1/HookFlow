@@ -8,7 +8,8 @@
     "dev": "concurrently -n \"SERVER,CLIENT\" -c \"cyan,magenta\" \"npm run server:dev\" \"npm run client:dev\"",
     "server:dev": "tsx watch server/index.ts",
     "client:dev": "npm run dev --prefix client",
-    "build": "npm run build --prefix client",
+    "build": "npm install --prefix client && npm run build --prefix client",
+    "postinstall": "npm install --prefix client",
     "start": "tsx server/index.ts"
   },
   "keywords": [
