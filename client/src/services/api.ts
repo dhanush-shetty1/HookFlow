@@ -75,6 +75,58 @@ export const api = {
     body: any;
     eventId?: string;
   }): Promise<ForwardResponse> {
+    const isLocal = params.targetUrl.includes('localhost') || params.targetUrl.includes('127.0.0.1');
+
+    // ── Mode 1: HookFlow LocalBridge™ Browser-Direct Relay ──────────────────────
+    if (isLocal && typeof window !== 'undefined') {
+      const start = performance.now();
+      try {
+        const bodyContent = typeof params.body === 'string' ? params.body : JSON.stringify(params.body);
+        const headersToSend: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'x-forwarded-by': 'HookFlow-LocalBridge/1.0',
+          ...(params.headers || {})
+        };
+
+        const res = await fetch(params.targetUrl, {
+          method: params.method || 'POST',
+          headers: headersToSend,
+          body: bodyContent
+        });
+
+        const timeMs = Math.round(performance.now() - start);
+        let respData: any = '';
+        try {
+          respData = await res.json();
+        } catch {
+          respData = await res.text();
+        }
+
+        return {
+          statusCode: res.status,
+          statusText: res.statusText || (res.status >= 200 && res.status < 300 ? 'OK' : 'Response Error'),
+          headers: Object.fromEntries(res.headers.entries()),
+          body: respData,
+          timeMs
+        };
+      } catch (err: any) {
+        const timeMs = Math.round(performance.now() - start);
+        return {
+          statusCode: 0,
+          statusText: 'LocalBridge Connection Refused',
+          headers: {},
+          body: {
+            error: `Could not connect to ${params.targetUrl}. Is your local application running?`,
+            details: err.message,
+            tip: 'HookFlow LocalBridge™ attempted browser-direct delivery to localhost without ngrok or third-party tunnels.'
+          },
+          timeMs,
+          error: err.message
+        };
+      }
+    }
+
+    // Standard remote server relay via backend
     const res = await fetch(`${API_BASE}/replay`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

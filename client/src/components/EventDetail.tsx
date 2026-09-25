@@ -509,7 +509,14 @@ export const EventDetail: React.FC<EventDetailProps> = ({
               </div>
 
               <div className="md:col-span-3">
-                <label className="block text-xs font-medium text-zinc-400 mb-1">Destination URL</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-zinc-400">Destination URL</label>
+                  {(replayUrl.includes('localhost') || replayUrl.includes('127.0.0.1')) && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-950/50 border border-emerald-800/60 px-2 py-0.5 rounded-full">
+                      <Zap className="w-2.5 h-2.5" /> LocalBridge™ (Zero-Tunnel Direct)
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"

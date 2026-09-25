@@ -4,6 +4,9 @@
   "description": "Real-Time Webhook Proxy, Replayer & AI Schema Synthesizer",
   "main": "server/index.ts",
   "type": "module",
+  "bin": {
+    "hookflow": "bin/hookflow.js"
+  },
   "scripts": {
     "dev": "concurrently -n \"SERVER,CLIENT\" -c \"cyan,magenta\" \"npm run server:dev\" \"npm run client:dev\"",
     "server:dev": "tsx watch server/index.ts",
