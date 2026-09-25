@@ -1,6 +1,6 @@
 # Hookflow
 
-Local-first webhook proxy, HMAC verifier, event replayer, and schema synthesizer for backend development.
+Local first webhook proxy, HMAC verifier, event replayer, and schema synthesizer for backend development.
 
 ## Overview
 
