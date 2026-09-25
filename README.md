@@ -8,18 +8,28 @@ Hookflow is an open-source local engine for capturing, inspecting, verifying, an
 
 ## Core Features
 
+- **HookFlow LocalBridge™ (Zero-Tunnel Local Relay)**: Eliminates third-party tunneling tools (ngrok, Cloudflare) with a zero-config pipeline delivering live cloud webhooks directly to your local development server (`http://localhost:5000`).
 - **Live WebSocket Event Stream**: Sub-15ms broadcast of raw request headers, query parameters, and JSON payloads.
 - **HMAC Signature Verifiers**: Timing-safe verification using `crypto.timingSafeEqual` for Stripe, GitHub, Shopify, Clerk/Svix, Twilio, Discord, and Slack.
 - **AI & AST Schema Synthesizer**: Converts raw JSON payloads into TypeScript interfaces, Zod validation schemas, and Next.js App Router handlers using Gemini 2.5 Flash with an automatic offline AST fallback.
-- **Localhost Replayer**: Edit payloads or headers in the dashboard and re-broadcast events directly to your local development server (`http://localhost:3000`).
+- **Localhost Replayer**: Edit payloads or headers in the dashboard and re-broadcast events directly to your local development server.
 - **Flexible Storage**: Zero-dependency embedded JSON file storage (`.hookflow_data/store.json`) with optional MongoDB Atlas sync.
+
+## ⚡ Feature Spotlight: HookFlow LocalBridge™
+
+HookFlow LocalBridge eliminates third-party tunneling tools (ngrok, Cloudflare, localtunnel) by providing an inbuilt, zero-config pipeline that delivers live cloud webhooks directly to your local development server.
+
+### How It Works
+
+1. **Browser-Direct Forwarding (Zero Install)**: When viewing the HookFlow web console, your browser dispatches HTTP requests directly to `http://localhost:[PORT]` without installing extra binaries or command-line utilities.
+2. **Native WebSocket Event Relay**: For continuous background testing, HookFlow provides a streaming daemon (`npx hookflow listen --forward http://localhost:5000`) that opens a persistent WebSocket connection to stream verified payloads down to your local machine with sub-15ms delivery latency.
 
 ## Architecture
 
 ```
-[External Webhook] → [Hookflow Server :4000] → [WebSocket Bus] → [React Console :3000]
+[External Webhook] → [Hookflow Server :4000] → [WebSocket Bus / LocalBridge™] → [React Console :3000]
                              │
-                             └─► [HMAC Verifier] → [AI Synthesizer] → [Replay -> localhost:3000]
+                             └─► [HMAC Verifier] → [AI Synthesizer] → [Replay -> localhost:5000]
 ```
 
 ## Local Development
