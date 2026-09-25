@@ -4,7 +4,7 @@ Local first webhook proxy, HMAC verifier, event replayer, and schema synthesizer
 
 ## Overview
 
-Hookflow is an open-source local engine for capturing, inspecting, verifying, and replaying inbound HTTP webhooks. It streams incoming payloads to a web dashboard over WebSockets in real time and automatically generates TypeScript interfaces, Zod schemas, and route handlers.
+Hookflow is an open source local engine for capturing, inspecting, verifying, and replaying inbound HTTP webhooks. It streams incoming payloads to a web dashboard over WebSockets in real time and automatically generates TypeScript interfaces, Zod schemas, and route handlers.
 
 ## Core Features
 
