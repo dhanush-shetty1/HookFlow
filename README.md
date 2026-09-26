@@ -8,7 +8,7 @@ Hookflow is an open source local engine for capturing, inspecting, verifying, an
 
 ## Core Features
 
-- **HookFlow LocalBridge™ (Zero-Tunnel Local Relay)**: Eliminates third-party tunneling tools (ngrok, Cloudflare) with a zero-config pipeline delivering live cloud webhooks directly to your local development server (`http://localhost:5000`).
+- **HookFlow LocalBridge™ (Zero Tunnel Local Relay)**: Eliminates third-party tunneling tools (ngrok, Cloudflare) with a zero-config pipeline delivering live cloud webhooks directly to your local development server (`http://localhost:5000`).
 - **Live WebSocket Event Stream**: Sub-15ms broadcast of raw request headers, query parameters, and JSON payloads.
 - **HMAC Signature Verifiers**: Timing-safe verification using `crypto.timingSafeEqual` for Stripe, GitHub, Shopify, Clerk/Svix, Twilio, Discord, and Slack.
 - **AI & AST Schema Synthesizer**: Converts raw JSON payloads into TypeScript interfaces, Zod validation schemas, and Next.js App Router handlers using Gemini 2.5 Flash with an automatic offline AST fallback.
