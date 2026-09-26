@@ -5,9 +5,24 @@ export type SignatureProvider =
   | 'shopify'
   | 'clerk'
   | 'custom_hmac_sha256'
+  | 'twilio'
+  | 'discord'
   | 'none';
 
 export type SignatureStatus = 'verified' | 'failed' | 'unsigned' | 'missing_secret';
+
+export type DashboardPlane = 'sandbox' | 'private';
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
 
 export interface SignatureDetails {
   provider: string;
@@ -30,6 +45,8 @@ export interface ForwardResponse {
 export interface WebhookEvent {
   id: string;
   endpointId: string;
+  userId?: string;
+  isPublic?: boolean;
   method: string;
   path: string;
   headers: Record<string, string | string[] | undefined>;
@@ -47,6 +64,8 @@ export interface WebhookEvent {
 
 export interface Endpoint {
   id: string;
+  userId?: string;
+  isPublic?: boolean;
   name: string;
   description?: string;
   secret?: string;

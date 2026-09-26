@@ -1,4 +1,12 @@
-import { Endpoint, WebhookEvent, SchemaSynthesisResult, MockWebhookTemplate, ForwardResponse } from '../types';
+import {
+  Endpoint,
+  WebhookEvent,
+  SchemaSynthesisResult,
+  MockWebhookTemplate,
+  ForwardResponse,
+  User,
+  AuthResponse
+} from '../types';
 
 const getApiBase = () => {
   if (typeof window !== 'undefined') {
@@ -10,9 +18,92 @@ const getApiBase = () => {
 
 const API_BASE = getApiBase();
 
+function getHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...extra
+  };
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('hookflow_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+  return headers;
+}
+
 export const api = {
-  async getEndpoints(): Promise<Endpoint[]> {
-    const res = await fetch(`${API_BASE}/endpoints`);
+  // ── AUTHENTICATION ─────────────────────────────────────────────────────────
+  getToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('hookflow_token');
+  },
+
+  setToken(token: string | null) {
+    if (typeof window === 'undefined') return;
+    if (token) {
+      localStorage.setItem('hookflow_token', token);
+    } else {
+      localStorage.removeItem('hookflow_token');
+    }
+  },
+
+  async register(params: { email: string; password: string; name: string }): Promise<AuthResponse> {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Registration failed');
+    if (data.token) {
+      this.setToken(data.token);
+    }
+    return data;
+  },
+
+  async login(params: { email: string; password: string }): Promise<AuthResponse> {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Login failed');
+    if (data.token) {
+      this.setToken(data.token);
+    }
+    return data;
+  },
+
+  async getMe(): Promise<User | null> {
+    const token = this.getToken();
+    if (!token) return null;
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`, {
+        headers: getHeaders()
+      });
+      if (!res.ok) {
+        this.setToken(null);
+        return null;
+      }
+      const data = await res.json();
+      return data.user;
+    } catch {
+      return null;
+    }
+  },
+
+  logout() {
+    this.setToken(null);
+  },
+
+  // ── ENDPOINTS (DUAL-PLANE SCOPED) ──────────────────────────────────────────
+  async getEndpoints(plane?: 'sandbox' | 'private' | 'all'): Promise<Endpoint[]> {
+    const query = plane ? `?plane=${plane}` : '';
+    const res = await fetch(`${API_BASE}/endpoints${query}`, {
+      headers: getHeaders()
+    });
     const data = await res.json();
     return data.endpoints || [];
   },
@@ -20,54 +111,69 @@ export const api = {
   async createEndpoint(payload: Partial<Endpoint>): Promise<Endpoint> {
     const res = await fetch(`${API_BASE}/endpoints`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(payload)
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to create endpoint');
+    if (!res.ok) throw new Error(data.message || data.error || 'Failed to create endpoint');
     return data.endpoint;
   },
 
   async updateEndpoint(id: string, payload: Partial<Endpoint>): Promise<Endpoint> {
     const res = await fetch(`${API_BASE}/endpoints/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(payload)
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to update endpoint');
+    if (!res.ok) throw new Error(data.message || data.error || 'Failed to update endpoint');
     return data.endpoint;
   },
 
   async deleteEndpoint(id: string): Promise<boolean> {
     const res = await fetch(`${API_BASE}/endpoints/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: getHeaders()
     });
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to delete endpoint');
     return data.success;
   },
 
-  async getEvents(endpointId?: string): Promise<WebhookEvent[]> {
-    const url = endpointId ? `${API_BASE}/events?endpointId=${endpointId}` : `${API_BASE}/events`;
-    const res = await fetch(url);
+  // ── EVENTS (DUAL-PLANE SCOPED) ─────────────────────────────────────────────
+  async getEvents(endpointId?: string, plane?: 'sandbox' | 'private' | 'all'): Promise<WebhookEvent[]> {
+    const params = new URLSearchParams();
+    if (endpointId) params.append('endpointId', endpointId);
+    if (plane) params.append('plane', plane);
+
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${API_BASE}/events${query}`, {
+      headers: getHeaders()
+    });
     const data = await res.json();
     return data.events || [];
   },
 
   async getEvent(id: string): Promise<WebhookEvent> {
-    const res = await fetch(`${API_BASE}/events/${id}`);
+    const res = await fetch(`${API_BASE}/events/${id}`, {
+      headers: getHeaders()
+    });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to fetch event');
     return data.event;
   },
 
   async clearEvents(endpointId?: string): Promise<boolean> {
-    const url = endpointId ? `${API_BASE}/events?endpointId=${endpointId}` : `${API_BASE}/events`;
-    const res = await fetch(url, { method: 'DELETE' });
+    const query = endpointId ? `?endpointId=${endpointId}` : '';
+    const res = await fetch(`${API_BASE}/events${query}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
     const data = await res.json();
     return data.success;
   },
 
+  // ── REPLAY ENGINE ──────────────────────────────────────────────────────────
   async replayWebhook(params: {
     targetUrl: string;
     method: string;
@@ -77,7 +183,7 @@ export const api = {
   }): Promise<ForwardResponse> {
     const isLocal = params.targetUrl.includes('localhost') || params.targetUrl.includes('127.0.0.1');
 
-    // ── Mode 1: HookFlow LocalBridge™ Browser-Direct Relay ──────────────────────
+    // HookFlow LocalBridge™ Browser-Direct Relay
     if (isLocal && typeof window !== 'undefined') {
       const start = performance.now();
       try {
@@ -129,7 +235,7 @@ export const api = {
     // Standard remote server relay via backend
     const res = await fetch(`${API_BASE}/replay`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(params)
     });
     const data = await res.json();
@@ -145,7 +251,7 @@ export const api = {
   }): Promise<SchemaSynthesisResult> {
     const res = await fetch(`${API_BASE}/synthesize`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(params)
     });
     const data = await res.json();
@@ -162,7 +268,7 @@ export const api = {
   async sendMockWebhook(endpointId: string, templateId: string, customSecret?: string): Promise<WebhookEvent> {
     const res = await fetch(`${API_BASE}/mock/send`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify({ endpointId, templateId, customSecret })
     });
     const data = await res.json();

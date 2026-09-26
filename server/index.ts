@@ -12,6 +12,15 @@ import { forwardWebhook } from './forwarder.js';
 import { synthesizeOfflineSchema, synthesizeWithGemini } from './aiSynthesizer.js';
 import { MOCK_TEMPLATES, buildMockPayload } from './mockWebhooks.js';
 import { WebhookEvent, ReplayRequest } from './types.js';
+import {
+  requireAuth,
+  optionalAuth,
+  hashPassword,
+  comparePassword,
+  generateToken,
+  verifyToken,
+  AuthenticatedRequest
+} from './auth.js';
 
 dotenv.config();
 
@@ -58,18 +67,25 @@ app.use((err: any, req: any, _res: any, next: any) => {
   next(err);
 });
 
-// WebSocket Connection Manager
-const clients = new Set<WebSocket>();
+// ----------------------------------------------------
+// ⚡ WEBSOCKET CONNECTION & DUAL-PLANE ROUTING
+// ----------------------------------------------------
+interface AuthenticatedWebSocket extends WebSocket {
+  userId?: string;
+  isAlive?: boolean;
+}
 
-wss.on('connection', (ws: WebSocket) => {
+const clients = new Set<AuthenticatedWebSocket>();
+
+wss.on('connection', (ws: AuthenticatedWebSocket) => {
   clients.add(ws);
-  
+  ws.isAlive = true;
+
   // Send initial handshake
   ws.send(JSON.stringify({
     type: 'CONNECTED',
     data: {
       connectedAt: Date.now(),
-      endpointsCount: db.getEndpoints().length,
       mongoConnected: db.isMongoConnected()
     }
   }));
@@ -79,6 +95,22 @@ wss.on('connection', (ws: WebSocket) => {
       const parsed = JSON.parse(message.toString());
       if (parsed.type === 'PING') {
         ws.send(JSON.stringify({ type: 'PONG', timestamp: Date.now() }));
+      } else if (parsed.type === 'AUTH') {
+        if (parsed.token) {
+          const user = verifyToken(parsed.token);
+          if (user) {
+            ws.userId = user.id;
+            ws.send(JSON.stringify({
+              type: 'AUTH_SUCCESS',
+              user: { id: user.id, email: user.email, name: user.name }
+            }));
+          } else {
+            ws.send(JSON.stringify({ type: 'AUTH_ERROR', message: 'Invalid or expired token' }));
+          }
+        }
+      } else if (parsed.type === 'LOGOUT') {
+        ws.userId = undefined;
+        ws.send(JSON.stringify({ type: 'LOGOUT_SUCCESS' }));
       }
     } catch {
       // ignore
@@ -95,10 +127,21 @@ wss.on('connection', (ws: WebSocket) => {
   });
 });
 
-function broadcast(type: string, data: any) {
+// Dual-Plane Broadcasting functions
+function broadcastToPublic(type: string, data: any) {
   const payload = JSON.stringify({ type, data, timestamp: Date.now() });
   for (const client of clients) {
     if (client.readyState === WebSocket.OPEN) {
+      client.send(payload);
+    }
+  }
+}
+
+function broadcastToUser(userId: string | undefined, type: string, data: any) {
+  if (!userId) return;
+  const payload = JSON.stringify({ type, data, timestamp: Date.now() });
+  for (const client of clients) {
+    if (client.readyState === WebSocket.OPEN && client.userId === userId) {
       client.send(payload);
     }
   }
@@ -109,7 +152,7 @@ function broadcast(type: string, data: any) {
 // ----------------------------------------------------
 async function handleWebhookIngest(req: any, res: express.Response) {
   const endpointId = req.params.endpointId;
-  const endpoint = db.getEndpoint(endpointId);
+  const endpoint = await db.getEndpoint(endpointId);
 
   if (!endpoint) {
     return res.status(404).json({
@@ -142,10 +185,12 @@ async function handleWebhookIngest(req: any, res: express.Response) {
   const eventId = `evt_${Date.now()}_${uuidv4().slice(0, 8)}`;
   const sizeBytes = Buffer.byteLength(rawBody, 'utf8');
 
-  // Build Webhook Event Object
+  // Build Webhook Event Object with dual-plane tagging
   const webhookEvent: WebhookEvent = {
     id: eventId,
     endpointId: endpoint.id,
+    userId: endpoint.userId,
+    isPublic: !!endpoint.isPublic,
     method: req.method,
     path: req.originalUrl,
     headers: req.headers,
@@ -161,28 +206,37 @@ async function handleWebhookIngest(req: any, res: express.Response) {
   };
 
   // Save event in DB
-  db.saveEvent(webhookEvent);
+  await db.saveEvent(webhookEvent);
 
-  // Fast broadcast to all connected WebSocket clients (<15ms)
-  broadcast('NEW_EVENT', webhookEvent);
+  // Strict room-filtered broadcast (<15ms)
+  if (endpoint.isPublic) {
+    broadcastToPublic('NEW_EVENT', webhookEvent);
+  } else if (endpoint.userId) {
+    broadcastToUser(endpoint.userId, 'NEW_EVENT', webhookEvent);
+  }
 
   // Perform background auto-forward if enabled
   if (endpoint.forwardEnabled && endpoint.forwardUrl) {
     forwardWebhook(endpoint.forwardUrl, req.method, req.headers, req.body, rawBody)
-      .then((forwardResp) => {
+      .then(async (forwardResp) => {
         webhookEvent.forwardStatus = forwardResp.statusCode >= 200 && forwardResp.statusCode < 400 ? 'success' : 'failed';
         webhookEvent.forwardResponse = forwardResp;
-        db.updateEvent(webhookEvent.id, {
+        await db.updateEvent(webhookEvent.id, {
           forwardStatus: webhookEvent.forwardStatus,
           forwardResponse: forwardResp
         });
-        broadcast('EVENT_FORWARDED', {
+        const forwardUpdate = {
           eventId: webhookEvent.id,
           forwardStatus: webhookEvent.forwardStatus,
           forwardResponse: forwardResp
-        });
+        };
+        if (endpoint.isPublic) {
+          broadcastToPublic('EVENT_FORWARDED', forwardUpdate);
+        } else if (endpoint.userId) {
+          broadcastToUser(endpoint.userId, 'EVENT_FORWARDED', forwardUpdate);
+        }
       })
-      .catch((err) => {
+      .catch(async (err) => {
         webhookEvent.forwardStatus = 'failed';
         webhookEvent.forwardResponse = {
           statusCode: 0,
@@ -192,15 +246,20 @@ async function handleWebhookIngest(req: any, res: express.Response) {
           body: null,
           error: err.message
         };
-        db.updateEvent(webhookEvent.id, {
+        await db.updateEvent(webhookEvent.id, {
           forwardStatus: 'failed',
           forwardResponse: webhookEvent.forwardResponse
         });
-        broadcast('EVENT_FORWARDED', {
+        const forwardUpdate = {
           eventId: webhookEvent.id,
           forwardStatus: 'failed',
           forwardResponse: webhookEvent.forwardResponse
-        });
+        };
+        if (endpoint.isPublic) {
+          broadcastToPublic('EVENT_FORWARDED', forwardUpdate);
+        } else if (endpoint.userId) {
+          broadcastToUser(endpoint.userId, 'EVENT_FORWARDED', forwardUpdate);
+        }
       });
   }
 
@@ -219,72 +278,176 @@ app.all('/hook/:endpointId', handleWebhookIngest);
 app.all('/api/hook/:endpointId', handleWebhookIngest);
 
 // ----------------------------------------------------
+// 🔐 AUTHENTICATION ENDPOINTS (JWT + BCRYPT)
+// ----------------------------------------------------
+
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+    if (!email || !password || !name) {
+      return res.status(400).json({ error: 'Name, email, and password are required' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const existingUser = await db.findUserByEmail(email);
+    if (existingUser) {
+      return res.status(400).json({ error: 'An account with this email already exists' });
+    }
+
+    const passwordHash = hashPassword(password);
+    const user = await db.createUser({ email, passwordHash, name });
+    const token = generateToken({ id: user.id, email: user.email, name: user.name });
+
+    res.status(201).json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Registration failed' });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    const user = await db.findUserByEmail(email);
+    if (!user || !comparePassword(password, user.passwordHash)) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    const token = generateToken({ id: user.id, email: user.email, name: user.name });
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Login failed' });
+  }
+});
+
+app.get('/api/auth/me', requireAuth, (req: AuthenticatedRequest, res) => {
+  res.json({ user: req.user });
+});
+
+// ----------------------------------------------------
 // 🚀 REST APIS FOR DEVELOPER DASHBOARD
 // ----------------------------------------------------
 
-// 1. Endpoints CRUD
-app.get('/api/endpoints', (_req, res) => {
-  res.json({ endpoints: db.getEndpoints() });
+// 1. Endpoints CRUD (Dual-Plane Scoped)
+app.get('/api/endpoints', optionalAuth, async (req: AuthenticatedRequest, res) => {
+  const plane = (req.query.plane as any) || (req.user ? 'all' : 'sandbox');
+  const endpoints = await db.getEndpoints(req.user?.id, plane);
+  res.json({ endpoints });
 });
 
-app.post('/api/endpoints', (req, res) => {
+app.post('/api/endpoints', optionalAuth, async (req: AuthenticatedRequest, res) => {
   const { name, description, secret, signatureProvider, forwardUrl, forwardEnabled, id } = req.body;
   if (!name) {
     return res.status(400).json({ error: 'Endpoint name is required' });
   }
 
-  const endpoint = db.createEndpoint({
+  // If user is not authenticated, require login for custom endpoints
+  if (!req.user) {
+    return res.status(401).json({
+      error: 'Authentication Required',
+      message: 'Please sign in to create secure private webhook endpoints in your personal vault.'
+    });
+  }
+
+  const endpoint = await db.createEndpoint({
     id,
     name,
     description,
     secret,
     signatureProvider: signatureProvider || 'auto',
     forwardUrl,
-    forwardEnabled: !!forwardEnabled
-  });
+    forwardEnabled: !!forwardEnabled,
+    isPublic: false
+  }, req.user.id);
 
-  broadcast('ENDPOINT_CREATED', endpoint);
+  broadcastToUser(req.user.id, 'ENDPOINT_CREATED', endpoint);
   res.status(201).json({ endpoint });
 });
 
-app.put('/api/endpoints/:id', (req, res) => {
-  const updated = db.updateEndpoint(req.params.id, req.body);
+app.put('/api/endpoints/:id', optionalAuth, async (req: AuthenticatedRequest, res) => {
+  const updated = await db.updateEndpoint(req.params.id, req.body, req.user?.id);
   if (!updated) {
-    return res.status(404).json({ error: 'Endpoint not found' });
+    return res.status(404).json({ error: 'Endpoint not found or permission denied' });
   }
-  broadcast('ENDPOINT_UPDATED', updated);
+
+  if (updated.isPublic) {
+    broadcastToPublic('ENDPOINT_UPDATED', updated);
+  } else if (updated.userId) {
+    broadcastToUser(updated.userId, 'ENDPOINT_UPDATED', updated);
+  }
+
   res.json({ endpoint: updated });
 });
 
-app.delete('/api/endpoints/:id', (req, res) => {
-  const deleted = db.deleteEndpoint(req.params.id);
-  if (!deleted) {
+app.delete('/api/endpoints/:id', optionalAuth, async (req: AuthenticatedRequest, res) => {
+  const existing = await db.getEndpoint(req.params.id);
+  if (!existing) {
     return res.status(404).json({ error: 'Endpoint not found' });
   }
-  broadcast('ENDPOINT_DELETED', { id: req.params.id });
+
+  if (existing.isPublic) {
+    return res.status(403).json({ error: 'Default public sandbox endpoints cannot be deleted' });
+  }
+
+  const deleted = await db.deleteEndpoint(req.params.id, req.user?.id);
+  if (!deleted) {
+    return res.status(403).json({ error: 'Permission denied to delete endpoint' });
+  }
+
+  if (existing.userId) {
+    broadcastToUser(existing.userId, 'ENDPOINT_DELETED', { id: req.params.id });
+  }
+
   res.json({ success: true, id: req.params.id });
 });
 
-// 2. Events Queries
-app.get('/api/events', (req, res) => {
+// 2. Events Queries (Dual-Plane Scoped)
+app.get('/api/events', optionalAuth, async (req: AuthenticatedRequest, res) => {
   const endpointId = req.query.endpointId as string;
+  const plane = (req.query.plane as any) || (req.user ? 'all' : 'sandbox');
   const limit = parseInt(req.query.limit as string) || 100;
-  const events = db.getEvents(endpointId, limit);
+  const events = await db.getEvents(endpointId, req.user?.id, plane, limit);
   res.json({ events });
 });
 
-app.get('/api/events/:id', (req, res) => {
-  const event = db.getEvent(req.params.id);
+app.get('/api/events/:id', optionalAuth, async (req: AuthenticatedRequest, res) => {
+  const event = await db.getEvent(req.params.id, req.user?.id);
   if (!event) {
-    return res.status(404).json({ error: 'Event not found' });
+    return res.status(404).json({ error: 'Event not found or unauthorized' });
   }
   res.json({ event });
 });
 
-app.delete('/api/events', (req, res) => {
+app.delete('/api/events', optionalAuth, async (req: AuthenticatedRequest, res) => {
   const endpointId = req.query.endpointId as string;
-  const count = db.clearEvents(endpointId);
-  broadcast('EVENTS_CLEARED', { endpointId });
+  const count = await db.clearEvents(endpointId, req.user?.id);
+  
+  if (req.user?.id) {
+    broadcastToUser(req.user.id, 'EVENTS_CLEARED', { endpointId });
+  } else {
+    broadcastToPublic('EVENTS_CLEARED', { endpointId });
+  }
+
   res.json({ success: true, deletedCount: count });
 });
 
@@ -304,11 +467,17 @@ app.post('/api/replay', async (req, res) => {
   );
 
   if (eventId) {
-    db.updateEvent(eventId, {
+    const updated = await db.updateEvent(eventId, {
       forwardResponse: result,
       forwardStatus: result.statusCode >= 200 && result.statusCode < 400 ? 'success' : 'failed'
     });
-    broadcast('EVENT_REPLAYED', { eventId, result });
+    if (updated) {
+      if (updated.isPublic) {
+        broadcastToPublic('EVENT_REPLAYED', { eventId, result });
+      } else if (updated.userId) {
+        broadcastToUser(updated.userId, 'EVENT_REPLAYED', { eventId, result });
+      }
+    }
   }
 
   res.json({ result });
@@ -340,12 +509,17 @@ app.get('/api/mock/templates', (_req, res) => {
   res.json({ templates: MOCK_TEMPLATES });
 });
 
-app.post('/api/mock/send', async (req, res) => {
+app.post('/api/mock/send', optionalAuth, async (req: AuthenticatedRequest, res) => {
   const { endpointId, templateId, customSecret } = req.body;
-  const endpoint = db.getEndpoint(endpointId);
+  const endpoint = await db.getEndpoint(endpointId);
 
   if (!endpoint) {
     return res.status(404).json({ error: 'Endpoint not found' });
+  }
+
+  // If private endpoint, ensure caller is owner
+  if (!endpoint.isPublic && endpoint.userId && endpoint.userId !== req.user?.id) {
+    return res.status(403).json({ error: 'Permission denied to send mock to private endpoint' });
   }
 
   const mock = buildMockPayload(templateId, customSecret || endpoint.secret);
@@ -362,6 +536,8 @@ app.post('/api/mock/send', async (req, res) => {
   const webhookEvent: WebhookEvent = {
     id: eventId,
     endpointId: endpoint.id,
+    userId: endpoint.userId,
+    isPublic: !!endpoint.isPublic,
     method: mock.template.method,
     path: `/hook/${endpoint.id}`,
     headers: mock.headers,
@@ -376,23 +552,33 @@ app.post('/api/mock/send', async (req, res) => {
     forwardStatus: endpoint.forwardEnabled && endpoint.forwardUrl ? 'pending' : 'disabled'
   };
 
-  db.saveEvent(webhookEvent);
-  broadcast('NEW_EVENT', webhookEvent);
+  await db.saveEvent(webhookEvent);
+
+  if (endpoint.isPublic) {
+    broadcastToPublic('NEW_EVENT', webhookEvent);
+  } else if (endpoint.userId) {
+    broadcastToUser(endpoint.userId, 'NEW_EVENT', webhookEvent);
+  }
 
   if (endpoint.forwardEnabled && endpoint.forwardUrl) {
     forwardWebhook(endpoint.forwardUrl, webhookEvent.method, webhookEvent.headers, webhookEvent.body, webhookEvent.rawBody)
-      .then(forwardResp => {
+      .then(async (forwardResp) => {
         webhookEvent.forwardStatus = forwardResp.statusCode >= 200 && forwardResp.statusCode < 400 ? 'success' : 'failed';
         webhookEvent.forwardResponse = forwardResp;
-        db.updateEvent(webhookEvent.id, {
+        await db.updateEvent(webhookEvent.id, {
           forwardStatus: webhookEvent.forwardStatus,
           forwardResponse: forwardResp
         });
-        broadcast('EVENT_FORWARDED', {
+        const forwardUpdate = {
           eventId: webhookEvent.id,
           forwardStatus: webhookEvent.forwardStatus,
           forwardResponse: forwardResp
-        });
+        };
+        if (endpoint.isPublic) {
+          broadcastToPublic('EVENT_FORWARDED', forwardUpdate);
+        } else if (endpoint.userId) {
+          broadcastToUser(endpoint.userId, 'EVENT_FORWARDED', forwardUpdate);
+        }
       });
   }
 
@@ -400,15 +586,17 @@ app.post('/api/mock/send', async (req, res) => {
 });
 
 // 6. Server Health & Stats
-app.get('/api/health', (_req, res) => {
+app.get('/api/health', async (_req, res) => {
+  const eps = await db.getEndpoints();
+  const evts = await db.getEvents();
   res.json({
     status: 'ok',
     version: '1.0.0',
     uptime: process.uptime(),
     connectedClients: clients.size,
     mongoConnected: db.isMongoConnected(),
-    endpointsCount: db.getEndpoints().length,
-    eventsCount: db.getEvents().length
+    endpointsCount: eps.length,
+    eventsCount: evts.length
   });
 });
 

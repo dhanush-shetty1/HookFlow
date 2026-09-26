@@ -6,12 +6,18 @@ import { EventDetail } from './EventDetail';
 import { MockWebhookModal } from './MockWebhookModal';
 import { EndpointModal } from './EndpointModal';
 import { SettingsModal } from './SettingsModal';
-import { Endpoint, WebhookEvent } from '../types';
+import { AuthModal } from './AuthModal';
+import { Endpoint, WebhookEvent, DashboardPlane, User } from '../types';
 import { api } from '../services/api';
 import { playWebhookChime } from '../utils/audio';
 
 export const ConsoleDashboard: React.FC = () => {
   const navigate = useNavigate();
+
+  // Dual-Plane Architecture State
+  const [plane, setPlane] = useState<DashboardPlane>('sandbox');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
   const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
   const [selectedEndpoint, setSelectedEndpoint] = useState<Endpoint | null>(null);
   const [events, setEvents] = useState<WebhookEvent[]>([]);
@@ -29,38 +35,55 @@ export const ConsoleDashboard: React.FC = () => {
   const [isEndpointModalOpen, setIsEndpointModalOpen] = useState(false);
   const [endpointToEdit, setEndpointToEdit] = useState<Endpoint | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isMongoConnected, setIsMongoConnected] = useState(false);
 
-  // Initial Data Fetch - Parallelized for instant loading
-  const loadData = async () => {
+  // Load endpoints & events for a given plane
+  const loadPlaneData = async (targetPlane: DashboardPlane) => {
     try {
       const [eps, health] = await Promise.all([
-        api.getEndpoints(),
+        api.getEndpoints(targetPlane),
         api.getHealth().catch(() => ({ mongoConnected: false }))
       ]);
+
       setEndpoints(eps);
       setIsMongoConnected(health.mongoConnected);
 
       const firstEp = eps.length > 0 ? eps[0] : null;
-      if (firstEp && !selectedEndpoint) {
-        setSelectedEndpoint(firstEp);
-      }
+      setSelectedEndpoint(firstEp);
 
-      const evts = await api.getEvents(firstEp?.id);
-      setEvents(evts);
-      if (evts.length > 0 && !selectedEvent) {
-        setSelectedEvent(evts[0]);
+      if (firstEp) {
+        const evts = await api.getEvents(firstEp.id, targetPlane);
+        setEvents(evts);
+        setSelectedEvent(evts.length > 0 ? evts[0] : null);
+      } else {
+        setEvents([]);
+        setSelectedEvent(null);
       }
     } catch (err) {
-      console.error('Failed to load initial HookFlow data:', err);
+      console.error('Failed to load HookFlow plane data:', err);
     }
   };
 
+  // Initial Boot: check existing user session and load initial plane
   useEffect(() => {
-    loadData();
+    const initSession = async () => {
+      const user = await api.getMe();
+      if (user) {
+        setCurrentUser(user);
+        // Default to private studio if already logged in
+        setPlane('private');
+        await loadPlaneData('private');
+      } else {
+        // Default to frictionless sandbox
+        setPlane('sandbox');
+        await loadPlaneData('sandbox');
+      }
+    };
+    initSession();
   }, []);
 
-  // WebSocket Setup
+  // WebSocket Setup & Room Management
   useEffect(() => {
     let ws: WebSocket;
     let reconnectTimeout: any;
@@ -81,6 +104,13 @@ export const ConsoleDashboard: React.FC = () => {
 
       ws.onopen = () => {
         setIsWsConnected(true);
+
+        // Authenticate socket if token exists
+        const token = api.getToken();
+        if (token) {
+          ws.send(JSON.stringify({ type: 'AUTH', token }));
+        }
+
         pingIntervalRef.current = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
             const start = performance.now();
@@ -100,6 +130,12 @@ export const ConsoleDashboard: React.FC = () => {
             setWsLatency(latency);
           } else if (message.type === 'NEW_EVENT') {
             const newEvt: WebhookEvent = message.data;
+
+            // Plane filter check:
+            // In Sandbox plane, only show public events.
+            // In Private Studio, only show private events.
+            if (plane === 'sandbox' && !newEvt.isPublic) return;
+            if (plane === 'private' && newEvt.isPublic) return;
 
             const soundEnabled = localStorage.getItem('hookflow_sound_enabled');
             if (soundEnabled !== 'false') {
@@ -130,7 +166,7 @@ export const ConsoleDashboard: React.FC = () => {
                 : prev
             );
           } else if (message.type === 'ENDPOINT_CREATED' || message.type === 'ENDPOINT_UPDATED') {
-            api.getEndpoints().then(setEndpoints);
+            api.getEndpoints(plane).then(setEndpoints);
           } else if (message.type === 'EVENTS_CLEARED') {
             setEvents([]);
             setSelectedEvent(null);
@@ -158,13 +194,47 @@ export const ConsoleDashboard: React.FC = () => {
       clearTimeout(reconnectTimeout);
       clearInterval(pingIntervalRef.current);
     };
-  }, [isPaused]);
+  }, [plane, isPaused]);
+
+  // Plane switching handler
+  const handleSelectPlane = async (newPlane: DashboardPlane) => {
+    if (newPlane === 'private' && !currentUser) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    setPlane(newPlane);
+    await loadPlaneData(newPlane);
+  };
+
+  // Auth success handler
+  const handleAuthSuccess = async (user: User) => {
+    setCurrentUser(user);
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      const token = api.getToken();
+      if (token) {
+        wsRef.current.send(JSON.stringify({ type: 'AUTH', token }));
+      }
+    }
+    setPlane('private');
+    await loadPlaneData('private');
+  };
+
+  // Logout handler
+  const handleLogout = async () => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'LOGOUT' }));
+    }
+    api.logout();
+    setCurrentUser(null);
+    setPlane('sandbox');
+    await loadPlaneData('sandbox');
+  };
 
   // When selected endpoint changes, reload events
   const handleSelectEndpoint = async (ep: Endpoint) => {
     setSelectedEndpoint(ep);
     try {
-      const evts = await api.getEvents(ep.id);
+      const evts = await api.getEvents(ep.id, plane);
       setEvents(evts);
       if (evts.length > 0) {
         setSelectedEvent(evts[0]);
@@ -192,14 +262,19 @@ export const ConsoleDashboard: React.FC = () => {
         <div className="absolute top-1/4 left-1/3 w-96 h-96 rounded-full bg-indigo-500/3 blur-3xl animate-float-slow" />
         <div className="absolute bottom-1/3 right-1/4 w-72 h-72 rounded-full bg-emerald-500/3 blur-3xl animate-float-slow" style={{ animationDelay: '-4s' }} />
       </div>
+
       {/* Content layers above background */}
       <div className="relative z-10 flex flex-col flex-1 min-h-screen">
-        {/* Top Navbar */}
+        {/* Top Navbar with Dual-Plane Controls */}
         <Navbar
           endpoints={endpoints}
           selectedEndpoint={selectedEndpoint}
           onSelectEndpoint={handleSelectEndpoint}
           onOpenNewEndpointModal={() => {
+            if (plane === 'private' && !currentUser) {
+              setIsAuthModalOpen(true);
+              return;
+            }
             setEndpointToEdit(null);
             setIsEndpointModalOpen(true);
           }}
@@ -209,6 +284,11 @@ export const ConsoleDashboard: React.FC = () => {
           onNavigateHome={() => navigate('/')}
           isWsConnected={isWsConnected}
           wsLatency={wsLatency}
+          plane={plane}
+          onSelectPlane={handleSelectPlane}
+          user={currentUser}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onLogout={handleLogout}
         />
 
         {/* Main Split Layout */}
@@ -236,12 +316,18 @@ export const ConsoleDashboard: React.FC = () => {
       </div>
 
       {/* Modals */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={handleAuthSuccess}
+      />
+
       <MockWebhookModal
         isOpen={isMockModalOpen}
         onClose={() => setIsMockModalOpen(false)}
         endpoints={endpoints}
         selectedEndpoint={selectedEndpoint}
-        onMockSent={loadData}
+        onMockSent={() => loadPlaneData(plane)}
       />
 
       <EndpointModal
@@ -252,7 +338,7 @@ export const ConsoleDashboard: React.FC = () => {
         }}
         endpointToEdit={endpointToEdit}
         onSaved={(saved) => {
-          api.getEndpoints().then((eps) => {
+          api.getEndpoints(plane).then((eps) => {
             setEndpoints(eps);
             setSelectedEndpoint(saved);
           });
