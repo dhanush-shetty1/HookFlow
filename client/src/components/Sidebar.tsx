@@ -6,7 +6,6 @@ import {
   Shield, 
   Pause, 
   Play, 
-  Clock, 
   RefreshCw
 } from 'lucide-react';
 import { WebhookEvent, Endpoint } from '../types';
@@ -54,12 +53,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const getMethodBadge = (method: string) => {
     switch (method.toUpperCase()) {
-      case 'POST': return 'bg-zinc-800 text-zinc-100 border-zinc-700';
-      case 'GET': return 'bg-zinc-900 text-sky-400 border-zinc-800';
-      case 'PUT': return 'bg-zinc-900 text-amber-400 border-zinc-800';
-      case 'PATCH': return 'bg-zinc-900 text-purple-400 border-zinc-800';
-      case 'DELETE': return 'bg-zinc-900 text-red-400 border-zinc-800';
-      default: return 'bg-zinc-900 text-zinc-400 border-zinc-800';
+      case 'POST': return 'bg-[#0a0a0a] text-white border-[#222222]';
+      case 'GET': return 'bg-[#0a0a0a] text-[#4ade80] border-[#222222]';
+      case 'PUT': return 'bg-[#0a0a0a] text-white border-[#222222]';
+      case 'PATCH': return 'bg-[#0a0a0a] text-white border-[#222222]';
+      case 'DELETE': return 'bg-[#0a0a0a] text-[#f87171] border-[#222222]';
+      default: return 'bg-[#0a0a0a] text-[#71717a] border-[#222222]';
     }
   };
 
@@ -72,31 +71,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <aside className="w-80 md:w-88 border-r border-zinc-800 bg-zinc-950 flex flex-col h-[calc(100vh-3.5rem)] select-none">
+    <aside className="w-80 md:w-88 border-r border-[#222222] bg-black flex flex-col h-[calc(100vh-56px)] select-none font-mono">
       {/* Search & Filter bar */}
-      <div className="p-3 border-b border-zinc-800 space-y-2 bg-zinc-950">
+      <div className="p-3 border-b border-[#222222] space-y-2 bg-black">
         <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#71717a]" />
           <input
             type="text"
             placeholder="Filter requests..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-800 focus:border-zinc-700 rounded-md pl-8 pr-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none transition-colors"
+            className="w-full bg-[#0a0a0a] border border-[#222222] focus:border-white rounded-md pl-8 pr-3 py-1.5 text-xs text-white placeholder-[#71717a] focus:outline-none transition-colors selection:bg-[#262626]"
           />
         </div>
 
         {/* Filter controls */}
         <div className="flex items-center justify-between gap-1 text-[11px]">
-          <div className="flex items-center gap-0.5 bg-zinc-900 border border-zinc-800/80 p-0.5 rounded-md">
+          <div className="flex items-center gap-0.5 bg-[#0a0a0a] border border-[#222222] p-0.5 rounded-md">
             {(['all', 'verified', 'failed', 'forwarded'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setFilterType(tab)}
-                className={`px-2 py-0.5 rounded text-[11px] font-medium capitalize transition-colors ${
+                className={`px-2 py-0.5 rounded text-[10px] font-medium capitalize transition-colors ${
                   filterType === tab
-                    ? 'bg-zinc-800 text-zinc-100 shadow-sm'
-                    : 'text-zinc-500 hover:text-zinc-300'
+                    ? 'bg-white text-black font-semibold shadow-sm'
+                    : 'text-[#71717a] hover:text-white'
                 }`}
               >
                 {tab}
@@ -106,25 +105,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={onTogglePause}
-            className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors border ${
+            className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-colors border ${
               isPaused
-                ? 'bg-amber-950/30 text-amber-400 border-amber-800/40'
-                : 'text-zinc-500 hover:text-zinc-300 border-transparent hover:bg-zinc-900'
+                ? 'bg-[#0a0a0a] text-[#fbbf24] border-[#222222]'
+                : 'bg-[#0a0a0a] text-[#4ade80] border-[#222222] hover:bg-[#141414]'
             }`}
           >
-            {isPaused ? <Play className="w-3 h-3 text-amber-400" /> : <Pause className="w-3 h-3" />}
+            {isPaused ? <Play className="w-3 h-3 text-[#fbbf24]" /> : <Pause className="w-3 h-3" />}
             <span>{isPaused ? 'Paused' : 'Live'}</span>
           </button>
         </div>
       </div>
 
       {/* Events List */}
-      <div className="flex-1 overflow-y-auto divide-y divide-zinc-900">
+      <div className="flex-1 overflow-y-auto divide-y divide-[#222222]">
         {filteredEvents.length === 0 ? (
-          <div className="p-8 text-center text-zinc-500 flex flex-col items-center justify-center h-full">
-            <RefreshCw className="w-6 h-6 text-zinc-700 mb-2" />
-            <p className="text-xs font-medium text-zinc-400">No requests captured</p>
-            <p className="text-[11px] text-zinc-600 mt-1 max-w-[200px]">
+          <div className="p-8 text-center text-[#71717a] flex flex-col items-center justify-center h-full">
+            <RefreshCw className="w-6 h-6 text-[#222222] mb-2" />
+            <p className="text-xs font-semibold text-white">No requests captured</p>
+            <p className="text-[11px] text-[#71717a] mt-1 max-w-[200px]">
               Waiting for incoming requests or mock dispatches.
             </p>
           </div>
@@ -136,48 +135,50 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 key={event.id}
                 onClick={() => onSelectEvent(event)}
                 className={`p-3 cursor-pointer transition-colors ${
-                  isSelected ? 'bg-zinc-900 border-l-2 border-zinc-200' : 'hover:bg-zinc-900/40'
+                  isSelected
+                    ? 'bg-[#141414] border-l-2 border-l-white'
+                    : 'hover:bg-[#0a0a0a]'
                 }`}
               >
                 {/* Method, Path, Time */}
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold border uppercase ${getMethodBadge(event.method)}`}>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border uppercase ${getMethodBadge(event.method)}`}>
                       {event.method}
                     </span>
-                    <span className="font-mono text-xs text-zinc-200 truncate font-medium">
+                    <span className="font-mono text-xs text-white truncate font-medium">
                       {event.path}
                     </span>
                   </div>
-                  <span className="text-[10px] text-zinc-500 font-mono shrink-0">
+                  <span className="text-[10px] text-[#71717a] font-mono shrink-0">
                     {formatRelativeTime(event.timestamp)}
                   </span>
                 </div>
 
                 {/* Sub row: signature status, event type, size */}
-                <div className="flex items-center justify-between text-[11px] text-zinc-500 font-mono">
+                <div className="flex items-center justify-between text-[11px] text-[#71717a] font-mono">
                   <div className="flex items-center gap-1.5 truncate">
                     {event.signatureStatus === 'verified' && (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400">
-                        <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                      <span className="inline-flex items-center gap-1 text-[10px] text-[#4ade80]">
+                        <ShieldCheck className="w-3 h-3 text-[#4ade80]" />
                         <span>verified</span>
                       </span>
                     )}
                     {event.signatureStatus === 'failed' && (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-red-400">
-                        <ShieldAlert className="w-3 h-3 text-red-400" />
+                      <span className="inline-flex items-center gap-1 text-[10px] text-[#f87171]">
+                        <ShieldAlert className="w-3 h-3 text-[#f87171]" />
                         <span>invalid sig</span>
                       </span>
                     )}
                     {event.signatureStatus === 'missing_secret' && (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-amber-400">
-                        <Shield className="w-3 h-3 text-amber-400" />
+                      <span className="inline-flex items-center gap-1 text-[10px] text-[#fbbf24]">
+                        <Shield className="w-3 h-3 text-[#fbbf24]" />
                         <span>no secret</span>
                       </span>
                     )}
 
                     {event.body?.type && (
-                      <span className="text-zinc-400 truncate max-w-[130px]">
+                      <span className="text-[#a1a1aa] truncate max-w-[130px]">
                         {event.body.type}
                       </span>
                     )}
@@ -187,13 +188,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {event.forwardResponse && (
                       <span className={`${
                         event.forwardResponse.statusCode >= 200 && event.forwardResponse.statusCode < 400
-                          ? 'text-emerald-400'
-                          : 'text-red-400'
+                          ? 'text-[#4ade80]'
+                          : 'text-[#f87171]'
                       }`}>
                         {event.forwardResponse.statusCode || 'ERR'} ({event.forwardResponse.timeMs}ms)
                       </span>
                     )}
-                    <span className="text-zinc-600">
+                    <span className="text-[#71717a]">
                       {event.sizeBytes > 1024 ? `${(event.sizeBytes / 1024).toFixed(1)}k` : `${event.sizeBytes}b`}
                     </span>
                   </div>
@@ -205,9 +206,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Footer */}
-      <div className="p-2.5 border-t border-zinc-800 bg-zinc-950 text-[11px] text-zinc-500 flex items-center justify-between font-mono">
+      <div className="p-2.5 border-t border-[#222222] bg-black text-[11px] text-[#71717a] flex items-center justify-between font-mono">
         <span>{filteredEvents.length} requests</span>
-        <span className="text-zinc-400">stream active</span>
+        <span className="text-[#4ade80] flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#4ade80]" />
+          stream active
+        </span>
       </div>
     </aside>
   );

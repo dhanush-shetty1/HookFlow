@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Endpoint, SignatureProvider } from '../types';
 import { api } from '../services/api';
 
@@ -84,28 +84,28 @@ export const EndpointModal: React.FC<EndpointModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="bg-zinc-950 border border-zinc-800 rounded-lg w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm font-mono">
+      <div className="bg-[#0a0a0a] border border-[#222222] rounded-xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
+        <div className="p-4 border-b border-[#222222] bg-black flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-zinc-100">
+            <h3 className="text-sm font-bold text-white">
               {endpointToEdit ? 'Edit Endpoint' : 'Create Ingestion Endpoint'}
             </h3>
-            <p className="text-xs text-zinc-500">Configure signature verification and local proxy targets</p>
+            <p className="text-xs text-[#71717a]">Configure signature verification and local proxy targets</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition-colors"
+            className="p-1 rounded text-[#71717a] hover:text-white hover:bg-[#141414] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSave} className="p-5 space-y-4">
+        <form onSubmit={handleSave} className="p-5 space-y-4 bg-[#0a0a0a]">
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1">
+            <label className="block text-xs font-medium text-[#a1a1aa] mb-1">
               Endpoint Name
             </label>
             <input
@@ -114,22 +114,22 @@ export const EndpointModal: React.FC<EndpointModalProps> = ({
               placeholder="e.g. Stripe Payments"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-zinc-900 border border-zinc-800 focus:border-zinc-700 rounded-md px-3 py-1.5 text-xs text-zinc-200 focus:outline-none"
+              className="w-full bg-black border border-[#222222] focus:border-white rounded-md px-3 py-1.5 text-xs text-white focus:outline-none placeholder-[#71717a]"
             />
           </div>
 
           {!endpointToEdit && (
             <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1">
+              <label className="block text-xs font-medium text-[#a1a1aa] mb-1">
                 Endpoint Slug
               </label>
-              <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-md px-3 py-1.5">
-                <span className="text-xs text-zinc-500 font-mono">/hook/</span>
+              <div className="flex items-center gap-1.5 bg-black border border-[#222222] rounded-md px-3 py-1.5">
+                <span className="text-xs text-[#71717a] font-mono">/hook/</span>
                 <input
                   type="text"
                   value={customId}
                   onChange={(e) => setCustomId(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ''))}
-                  className="bg-transparent font-mono text-xs text-zinc-200 focus:outline-none flex-1"
+                  className="bg-transparent font-mono text-xs text-white focus:outline-none flex-1"
                 />
               </div>
             </div>
@@ -137,13 +137,13 @@ export const EndpointModal: React.FC<EndpointModalProps> = ({
 
           {/* Signature Verification Scheme */}
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1">
+            <label className="block text-xs font-medium text-[#a1a1aa] mb-1">
               Signature Verification
             </label>
             <select
               value={signatureProvider}
               onChange={(e) => setSignatureProvider(e.target.value as SignatureProvider)}
-              className="w-full bg-zinc-900 border border-zinc-800 focus:border-zinc-700 rounded-md px-3 py-1.5 text-xs font-mono text-zinc-200 focus:outline-none"
+              className="w-full bg-black border border-[#222222] focus:border-white rounded-md px-3 py-1.5 text-xs font-mono text-white focus:outline-none"
             >
               <option value="auto">Auto-Detect</option>
               <option value="stripe">Stripe (stripe-signature)</option>
@@ -158,31 +158,31 @@ export const EndpointModal: React.FC<EndpointModalProps> = ({
           {/* Signing Secret */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-medium text-zinc-400">
+              <label className="text-xs font-medium text-[#a1a1aa]">
                 Signing Secret (Optional)
               </label>
-              <span className="text-[10px] text-zinc-500">e.g. whsec_...</span>
+              <span className="text-[10px] text-[#71717a]">e.g. whsec_...</span>
             </div>
             <input
               type="text"
               placeholder="Paste signing secret"
               value={secret}
               onChange={(e) => setSecret(e.target.value)}
-              className="w-full bg-zinc-900 border border-zinc-800 focus:border-zinc-700 rounded-md px-3 py-1.5 text-xs font-mono text-zinc-200 focus:outline-none placeholder-zinc-600"
+              className="w-full bg-black border border-[#222222] focus:border-white rounded-md px-3 py-1.5 text-xs font-mono text-white focus:outline-none placeholder-[#71717a]"
             />
           </div>
 
           {/* Forwarding */}
-          <div className="pt-2 border-t border-zinc-800">
+          <div className="pt-2 border-t border-[#222222]">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-medium text-zinc-400">
+              <label className="text-xs font-medium text-[#a1a1aa]">
                 Auto-Forward to Local Server
               </label>
               <input
                 type="checkbox"
                 checked={forwardEnabled}
                 onChange={(e) => setForwardEnabled(e.target.checked)}
-                className="w-4 h-4 rounded border-zinc-800 bg-zinc-900 text-zinc-100 accent-zinc-100"
+                className="w-4 h-4 rounded border-[#222222] bg-black accent-white"
               />
             </div>
 
@@ -191,23 +191,23 @@ export const EndpointModal: React.FC<EndpointModalProps> = ({
               placeholder="http://localhost:3000/api/webhooks"
               value={forwardUrl}
               onChange={(e) => setForwardUrl(e.target.value)}
-              className="w-full bg-zinc-900 border border-zinc-800 focus:border-zinc-700 rounded-md px-3 py-1.5 text-xs font-mono text-zinc-200 focus:outline-none"
+              className="w-full bg-black border border-[#222222] focus:border-white rounded-md px-3 py-1.5 text-xs font-mono text-white focus:outline-none"
             />
           </div>
 
           {/* Footer */}
-          <div className="pt-3 border-t border-zinc-800 flex items-center justify-end gap-2">
+          <div className="pt-3 border-t border-[#222222] flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-100 rounded-md transition-colors"
+              className="btn text-xs py-1.5 px-3"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSaving || !name.trim()}
-              className="px-4 py-1.5 bg-zinc-100 hover:bg-zinc-200 disabled:opacity-50 text-zinc-900 font-medium rounded-md text-xs transition-colors"
+              className="btn primary text-xs py-1.5 px-4 font-bold"
             >
               {isSaving ? 'Saving...' : endpointToEdit ? 'Save Changes' : 'Create Endpoint'}
             </button>

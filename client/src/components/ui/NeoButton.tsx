@@ -17,17 +17,17 @@ export const NeoButton: React.FC<NeoButtonProps> = ({
   const getVariantStyles = () => {
     switch (variant) {
       case 'primary':
-        return 'bg-zinc-100 text-zinc-950 border-zinc-100 hover:bg-white active:bg-zinc-200 shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)] hover:shadow-[5px_5px_0px_0px_rgba(255,255,255,0.35)]';
+        return 'bg-gradient-to-r from-[#e06c75] to-[#f0989e] text-white border-transparent hover:brightness-105 shadow-[0_4px_14px_rgba(224,108,117,0.3)] hover:-translate-y-px';
       case 'secondary':
-        return 'bg-zinc-900 text-zinc-100 border-zinc-700 hover:bg-zinc-800 shadow-[3px_3px_0px_0px_#27272a] hover:shadow-[5px_5px_0px_0px_#3f3f46]';
+        return 'bg-[#111111] text-[#9cdef2] border-[#355a66] hover:border-[#e06c75] hover:-translate-y-px';
       case 'accent':
-        return 'bg-emerald-500 text-zinc-950 font-bold border-emerald-400 hover:bg-emerald-400 shadow-[3px_3px_0px_0px_rgba(16,185,129,0.3)] hover:shadow-[5px_5px_0px_0px_rgba(16,185,129,0.5)]';
+        return 'bg-[#50fa7b]/15 text-[#50fa7b] border-[#50fa7b]/40 hover:bg-[#50fa7b]/25 hover:-translate-y-px';
       case 'destructive':
-        return 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20 shadow-[3px_3px_0px_0px_rgba(239,68,68,0.2)]';
+        return 'bg-[#e06c75]/15 text-[#e06c75] border-[#e06c75]/30 hover:bg-[#e06c75]/25';
       case 'outline':
-        return 'bg-transparent text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900 shadow-[3px_3px_0px_0px_#18181b]';
+        return 'bg-transparent text-[#9cdef2] border-[#355a66] hover:border-[#e06c75] hover:bg-[#1e2228]';
       default:
-        return 'bg-zinc-100 text-zinc-950 border-zinc-100 shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)]';
+        return 'bg-gradient-to-r from-[#e06c75] to-[#f0989e] text-white border-transparent';
     }
   };
 
@@ -44,7 +44,7 @@ export const NeoButton: React.FC<NeoButtonProps> = ({
 
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-lg border font-mono transition-all duration-200 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none select-none disabled:opacity-50 disabled:pointer-events-none ${getVariantStyles()} ${getSizeStyles()} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-lg border font-mono transition-all duration-150 select-none disabled:opacity-50 disabled:pointer-events-none ${getVariantStyles()} ${getSizeStyles()} ${className}`}
       {...props}
     >
       {children}

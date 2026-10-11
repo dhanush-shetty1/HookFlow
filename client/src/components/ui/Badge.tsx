@@ -1,13 +1,14 @@
 import React from 'react';
 
-type BadgeVariant = 'default' | 'success' | 'warning' | 'error' | 'outline';
+type BadgeVariant = 'default' | 'success' | 'warning' | 'error' | 'outline' | 'accent';
 
 const VARIANTS: Record<BadgeVariant, string> = {
-  default: 'bg-zinc-800 text-zinc-300 border-zinc-700',
-  success: 'bg-emerald-950/50 text-emerald-400 border-emerald-800/60',
-  warning: 'bg-amber-950/50 text-amber-400 border-amber-800/60',
-  error:   'bg-red-950/50 text-red-400 border-red-800/60',
-  outline: 'bg-transparent text-zinc-500 border-zinc-700',
+  default: 'bg-[#141414] text-white border-[#222222]',
+  success: 'bg-[#0a0a0a] text-[#4ade80] border-[#222222]',
+  warning: 'bg-[#0a0a0a] text-[#fbbf24] border-[#222222]',
+  error:   'bg-[#0a0a0a] text-[#f87171] border-[#222222]',
+  outline: 'bg-transparent text-[#71717a] border-[#222222]',
+  accent:  'bg-white text-black border-white font-semibold',
 };
 
 export const Badge: React.FC<{

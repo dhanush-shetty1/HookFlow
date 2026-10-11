@@ -1,19 +1,18 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import {
   ArrowRight, ShieldCheck, Zap, Sparkles, Copy, Check,
-  Radio, Lock, Cpu, RefreshCw, Globe, Activity,
-  Database, Webhook, Layers,
+  Lock, Cpu, RefreshCw, Globe, Activity,
+  Database, Webhook, Layers, Terminal as TerminalIcon
 } from 'lucide-react';
-import { Spotlight } from './ui/Spotlight';
 import { BorderBeam } from './ui/BorderBeam';
-import { ShimmerButton } from './ui/ShimmerButton';
-import { GlowingBadge } from './ui/GlowingBadge';
 import { FeatureCard } from './ui/FeatureCard';
 import { CodeBlock } from './ui/CodeBlock';
 import { Badge } from './ui/Badge';
 import { TerminalWindow } from './ui/TerminalWindow';
+import { LiveTraceSimulator } from './LiveTraceSimulator';
+import { InteractiveFeatureGrid } from './InteractiveFeatureGrid';
 
 /* ─── Scroll-reveal wrapper ───────────────────────────────────────────── */
 const FadeUp: React.FC<{ children: React.ReactNode; delay?: number; className?: string }> = ({
@@ -38,27 +37,27 @@ const FadeUp: React.FC<{ children: React.ReactNode; delay?: number; className?: 
 const ARCH_NODES = [
   {
     id: 'source', label: 'External Service', sublabel: 'Stripe / GitHub / Shopify',
-    icon: Globe, color: 'text-zinc-400', bg: 'bg-zinc-900', border: 'border-zinc-700',
-    desc: 'Any service that sends HTTP POST webhooks — Stripe, GitHub, Shopify, Clerk, or your own app.',
+    icon: Globe, color: 'text-white', bg: 'bg-[#0a0a0a]', border: 'border-[#222222]',
+    desc: 'Any service that sends HTTP POST webhooks — Stripe, GitHub, Shopify, Clerk, or your own application.',
   },
   {
     id: 'ingest', label: 'Ingestion Endpoint', sublabel: 'POST /hook/:endpointId',
-    icon: Webhook, color: 'text-sky-400', bg: 'bg-sky-950/30', border: 'border-sky-800/50',
+    icon: Webhook, color: 'text-white', bg: 'bg-[#0a0a0a]', border: 'border-[#222222]',
     desc: 'Express route captures the raw HTTP request buffer preserving exact byte content for HMAC computation.',
   },
   {
     id: 'verify', label: 'HMAC Verifier', sublabel: 'crypto.timingSafeEqual',
-    icon: ShieldCheck, color: 'text-emerald-400', bg: 'bg-emerald-950/30', border: 'border-emerald-800/50',
+    icon: ShieldCheck, color: 'text-[#4ade80]', bg: 'bg-[#0a0a0a]', border: 'border-[#222222]',
     desc: 'Timing-safe HMAC-SHA256 verification against your endpoint secret. Supports Stripe, GitHub, Shopify, and Clerk.',
   },
   {
     id: 'ws', label: 'WebSocket Bus', sublabel: 'ws://localhost:4000',
-    icon: Zap, color: 'text-purple-400', bg: 'bg-purple-950/30', border: 'border-purple-800/50',
+    icon: Zap, color: 'text-white', bg: 'bg-[#0a0a0a]', border: 'border-[#222222]',
     desc: 'Native WebSocket server broadcasts each incoming event to all connected dashboard clients in under 15ms.',
   },
   {
     id: 'dashboard', label: 'React Dashboard', sublabel: 'localhost:3000',
-    icon: Layers, color: 'text-amber-400', bg: 'bg-amber-950/30', border: 'border-amber-800/50',
+    icon: Layers, color: 'text-white', bg: 'bg-[#0a0a0a]', border: 'border-[#222222]',
     desc: 'Real-time dashboard with event stream, signature inspector, AI schema synthesizer, and 1-click replayer.',
   },
 ];
@@ -260,16 +259,9 @@ const DEMO: Record<DemoKey, { sigHeader: string; payload: object; ts: string; zo
   },
 };
 
-/* ─── Main Component ──────────────────────────────────────────────────── */
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [cmdCopied, setCmdCopied] = useState(false);
-
-  // Hero workbench
-  const [demoProvider, setDemoProvider] = useState<DemoKey>('stripe');
-  const [demoSchema, setDemoSchema] = useState<'ts' | 'zod' | 'nextjs'>('ts');
-  const [replayState, setReplayState] = useState<'idle' | 'sending' | 'success'>('idle');
-  const [eventCount, setEventCount] = useState(4);
 
   // Architecture
   const [activeNode, setActiveNode] = useState<string | null>(null);
@@ -279,22 +271,14 @@ export const LandingPage: React.FC = () => {
   const [synthSchema, setSynthSchema] = useState<SchemaKey>('typescript');
   const [customJson, setCustomJson] = useState(SAMPLE_JSON.stripe);
 
-  const demo = DEMO[demoProvider];
+  // Terminal state
+  const [cliTab, setCliTab] = useState<'listen' | 'verify' | 'synth'>('listen');
+  const [termMinimized, setTermMinimized] = useState(false);
 
   const copyCmd = () => {
     navigator.clipboard.writeText('npm run dev');
     setCmdCopied(true);
     setTimeout(() => setCmdCopied(false), 2000);
-  };
-
-  const simulateReplay = () => {
-    if (replayState !== 'idle') return;
-    setReplayState('sending');
-    setTimeout(() => {
-      setReplayState('success');
-      setEventCount(c => c + 1);
-      setTimeout(() => setReplayState('idle'), 2500);
-    }, 650);
   };
 
   const handleSynthProvider = (p: ProviderKey) => {
@@ -310,318 +294,265 @@ export const LandingPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#030304] text-zinc-100 font-sans relative overflow-x-hidden bg-noise scroll-smooth">
-      {/* Calyx-style dark grid overlay */}
-      <div className="fixed inset-0 pointer-events-none z-0 transform-gpu will-change-transform">
-        <div className="absolute inset-0 bg-grid-white opacity-[0.035] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_0%,black_30%,transparent_100%)]" />
-      </div>
-      <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="white" />
+    <div className="min-h-screen bg-black text-[#e4e4e7] font-mono relative overflow-x-hidden scroll-smooth selection:bg-[#262626] selection:text-white">
 
-      {/* ── HEADER ───────────────────────────────────────────────────────── */}
-      <header className="h-14 border-b border-zinc-800/80 bg-[#030304]/90 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-40 transform-gpu">
-        <div className="flex items-center gap-3">
-          <span className="font-semibold text-sm tracking-tight text-zinc-100">Hookflow</span>
-        </div>
-
-        {/* Perfectly Center-Aligned Navigation Links */}
-        <nav className="hidden md:flex flex-1 justify-center items-center gap-8 text-xs font-mono text-zinc-400">
-          <button onClick={() => scrollToSection('features')} className="hover:text-zinc-100 transition-colors flex items-center gap-1.5 cursor-pointer">
-            <small className="text-zinc-600 font-bold">01</small>
-            <b className="font-bold tracking-wider">FEATURES</b>
-          </button>
-          <button onClick={() => scrollToSection('architecture')} className="hover:text-zinc-100 transition-colors flex items-center gap-1.5 cursor-pointer">
-            <small className="text-zinc-600 font-bold">02</small>
-            <b className="font-bold tracking-wider">ARCHITECTURE</b>
-          </button>
-          <button onClick={() => scrollToSection('ai-synthesizer')} className="hover:text-zinc-100 transition-colors flex items-center gap-1.5 cursor-pointer">
-            <small className="text-zinc-600 font-bold">03</small>
-            <b className="font-bold tracking-wider">AI SYNTHESIZER</b>
-          </button>
-          <button onClick={() => scrollToSection('providers')} className="hover:text-zinc-100 transition-colors flex items-center gap-1.5 cursor-pointer">
-            <small className="text-zinc-600 font-bold">04</small>
-            <b className="font-bold tracking-wider">PROVIDERS</b>
-          </button>
-        </nav>
-
-        {/* Industrial Cut Button */}
-        <button
-          onClick={() => navigate('/console')}
-          className="cut-button bg-zinc-100 text-zinc-950 hover:bg-white font-mono font-semibold text-xs px-4 py-2 flex items-center gap-2 transition-all tracking-wider uppercase"
+      {/* ── FLOATING PILL NAVBAR (ELF-INSPIRED) ─────────────────────────── */}
+      <header className="fixed inset-x-0 top-0 z-50 flex justify-center pointer-events-none">
+        <nav
+          aria-label="Main"
+          className="pointer-events-auto flex items-center justify-between transition-all duration-300 mt-2 sm:mt-3 h-[52px] sm:h-[56px] w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-w-5xl bg-black/85 backdrop-blur-md px-4 sm:px-6 text-white border border-[#222222] rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.8)] select-none font-mono"
         >
-          <span>OPEN CONSOLE</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
+          {/* Brand */}
+          <div 
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="flex items-center font-bold text-sm tracking-tight text-white cursor-pointer hover:opacity-80 transition-opacity"
+          >
+            <span>HookFlow</span>
+          </div>
+
+          {/* Navigation Links */}
+          <ul className="hidden md:flex items-center gap-1">
+            <li>
+              <button
+                onClick={() => scrollToSection('live-tour')}
+                className="rounded-full px-3.5 py-1.5 text-xs text-[#a1a1aa] transition-colors duration-200 hover:bg-white/10 hover:text-white"
+              >
+                Tour
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => scrollToSection('features')}
+                className="rounded-full px-3.5 py-1.5 text-xs text-[#a1a1aa] transition-colors duration-200 hover:bg-white/10 hover:text-white"
+              >
+                Features
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => scrollToSection('cli')}
+                className="rounded-full px-3.5 py-1.5 text-xs text-[#a1a1aa] transition-colors duration-200 hover:bg-white/10 hover:text-white"
+              >
+                CLI
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => scrollToSection('architecture')}
+                className="rounded-full px-3.5 py-1.5 text-xs text-[#a1a1aa] transition-colors duration-200 hover:bg-white/10 hover:text-white"
+              >
+                Architecture
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => scrollToSection('ai-synthesizer')}
+                className="rounded-full px-3.5 py-1.5 text-xs text-[#a1a1aa] transition-colors duration-200 hover:bg-white/10 hover:text-white"
+              >
+                Synthesizer
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => scrollToSection('providers')}
+                className="rounded-full px-3.5 py-1.5 text-xs text-[#a1a1aa] transition-colors duration-200 hover:bg-white/10 hover:text-white"
+              >
+                Providers
+              </button>
+            </li>
+          </ul>
+
+          {/* Right Action */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/console')}
+              className="rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-200 active:scale-[0.98] bg-white text-black hover:bg-[#e4e4e7] flex items-center gap-1.5 shadow-sm"
+            >
+              <span>Launch Console</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </nav>
       </header>
 
-      {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="relative pt-24 pb-20 px-4 max-w-6xl mx-auto flex flex-col items-center text-center z-10">
-        <div className="mb-6">
-          <span className="section-pill">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            REAL-TIME WEBHOOK PROXY · REPLAYER · AI SYNTHESIZER
-          </span>
-        </div>
+      {/* ── HERO SECTION ─────────────────────────────────────────────────── */}
+      <header className="relative pt-24 sm:pt-32 pb-16 px-4 text-center overflow-hidden min-h-[85vh] flex flex-col justify-center items-center">
+        <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
+          {/* Headline */}
+          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-[1.1] mb-6 text-white max-w-3xl">
+            Debug Webhooks.<br />
+            <span className="text-[#71717a]">Know what arrived.</span>
+          </h1>
 
-        <motion.h1
-          initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.08 }}
-          className="text-5xl sm:text-7xl font-bold tracking-tight leading-[1.05] mb-6 max-w-4xl font-sans"
-        >
-          <span className="text-transparent bg-clip-text bg-gradient-to-b from-white via-zinc-100 to-zinc-500">
-            DEBUG WEBHOOKS.
-          </span>
-          <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-b from-zinc-300 to-zinc-600">
-            KNOW WHAT ARRIVED.
-          </span>
-        </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.15 }}
-          className="text-xs sm:text-sm text-zinc-400 max-w-xl mx-auto mb-10 leading-relaxed font-mono"
-        >
-          OBSERVE · VERIFY · SYNTHESIZE · REPLAY
-          <br />
-          <span className="text-zinc-500 font-sans mt-1 inline-block">
-            Sub-15ms WebSocket streaming, HMAC signature verification, and AI-powered Zod + TypeScript schema synthesis — running locally on your machine.
-          </span>
-        </motion.p>
-
-        {/* CTA row — Calyx Cut Button */}
-        <motion.div
-          initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.22 }}
-          className="flex flex-wrap items-center justify-center gap-4 mb-16"
-        >
-          <button
-            onClick={() => navigate('/console')}
-            className="cut-button bg-zinc-100 text-zinc-950 hover:bg-white font-mono font-bold text-xs px-6 py-3 flex items-center gap-2 transition-all tracking-widest uppercase shadow-lg shadow-white/5"
-          >
-            <span>OPEN CONSOLE</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={copyCmd}
-            className="flex items-center gap-2.5 bg-[#09090c] border border-zinc-800 hover:border-zinc-700 rounded-md px-4 py-2.5 text-xs font-mono text-zinc-400 transition-all hover:text-zinc-200 group"
-          >
-            <span className="text-zinc-600">$</span>
-            <span>npm run dev</span>
-            <span className="ml-1 text-zinc-600 group-hover:text-zinc-300 transition-colors">
-              {cmdCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            </span>
-          </button>
-        </motion.div>
-
-        {/* ── Interactive Demo Workbench (Calyx Evidence Terminal style) ─── */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.75, delay: 0.35 }}
-          className="w-full max-w-5xl rounded-xl border border-zinc-800 bg-[#08080a] shadow-2xl overflow-hidden text-left relative"
-        >
-          <BorderBeam size={300} duration={12} colorFrom="#ffffff" colorTo="#3f3f46" borderWidth={1} />
-
-          {/* Window chrome */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-[#0c0c0e]">
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-400">
-                INCIDENT / HOOK-INGEST
-              </span>
-              <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1 font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                ● LIVE
-              </span>
-            </div>
-            {/* Provider switcher */}
-            <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded p-0.5">
-              {(['stripe', 'github', 'clerk', 'shopify'] as DemoKey[]).map(p => (
-                <button
-                  key={p} onClick={() => setDemoProvider(p)}
-                  className={`px-3 py-1 rounded text-[10px] font-mono uppercase transition-all ${
-                    demoProvider === p ? 'bg-zinc-800 text-zinc-100 font-bold' : 'text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >{p}</button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-zinc-800/80">
-            {/* Left: Payload */}
-            <div className="lg:col-span-5 p-5 space-y-3 bg-[#08080a]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="tag-observed px-2 py-0.5 text-[9px] rounded font-mono font-bold">OBSERVED</span>
-                  <span className="text-[11px] font-mono text-zinc-400">/hook/ep_{demoProvider}</span>
-                </div>
-                <span className="tag-verified px-2 py-0.5 text-[9px] rounded font-mono font-bold">VERIFIED</span>
-              </div>
-
-              <div className="text-[10px] font-mono text-zinc-500 bg-[#0c0c0e] border border-zinc-800 rounded px-3 py-2 truncate">
-                {demo.sigHeader}
-              </div>
-
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={demoProvider}
-                  initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
-                  className="bg-[#050507] border border-zinc-800/80 rounded-lg p-4 font-mono text-[10px] text-zinc-300 max-h-52 overflow-y-auto"
-                >
-                  <pre>{JSON.stringify(demo.payload, null, 2)}</pre>
-                </motion.div>
-              </AnimatePresence>
-
-              {/* Live stream indicator */}
-              <div className="flex items-center gap-2 pt-1">
-                <div className="relative flex">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <motion.span
-                    className="absolute inset-0 rounded-full bg-emerald-400"
-                    animate={{ scale: [1, 2.5, 1], opacity: [0.8, 0, 0.8] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  />
-                </div>
-                <span className="text-[10px] font-mono text-zinc-500">{eventCount} EVENTS INGESTED · WS://LOCALHOST:4000</span>
-              </div>
-
-              {/* Replay flow */}
-              <div className="pt-2 border-t border-zinc-800/80">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-mono text-zinc-500">FORWARD TO LOCALHOST:3000</span>
-                  <button
-                    onClick={simulateReplay}
-                    disabled={replayState === 'sending'}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-mono uppercase border transition-all ${
-                      replayState === 'success' ? 'tag-verified' :
-                      replayState === 'sending' ? 'bg-zinc-900 border-zinc-800 text-zinc-500 cursor-not-allowed' :
-                      'bg-zinc-900 border-zinc-700 text-zinc-200 hover:border-zinc-500'
-                    }`}
-                  >
-                    {replayState === 'idle' && <><RefreshCw className="w-3 h-3" /> REPLAY</>}
-                    {replayState === 'sending' && (
-                      <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.5, repeat: Infinity, ease: 'linear' }}><RefreshCw className="w-3 h-3" /></motion.span> SENDING…</>
-                    )}
-                    {replayState === 'success' && <><Check className="w-3 h-3" /> 200 OK · 11MS</>}
-                  </button>
-                </div>
-                <div className="flex items-center gap-1 text-[9px] font-mono text-zinc-600">
-                  <span className="px-1.5 py-0.5 rounded border border-zinc-800 bg-[#0c0c0e] uppercase">{demoProvider}</span>
-                  <motion.div className="h-px flex-1 bg-zinc-800"
-                    animate={replayState === 'sending' ? { opacity: [0.3, 1, 0.3] } : {}}
-                    transition={{ duration: 0.4, repeat: Infinity }} />
-                  <span className="px-1.5 py-0.5 rounded border border-zinc-800 bg-[#0c0c0e] text-zinc-400 font-bold">HOOKFLOW</span>
-                  <motion.div className="h-px flex-1"
-                    style={{ background: replayState === 'success' ? '#10b981' : '#27272a' }}
-                    animate={replayState === 'sending' ? { opacity: [0.3, 1, 0.3] } : {}}
-                    transition={{ duration: 0.4, repeat: Infinity, delay: 0.2 }} />
-                  <span className={`px-1.5 py-0.5 rounded border font-bold transition-all ${
-                    replayState === 'success' ? 'tag-verified' : 'border-zinc-800 bg-[#0c0c0e]'
-                  }`}>
-                    {replayState === 'success' ? '200 OK' : ':3000'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Schema */}
-            <div className="lg:col-span-7 p-5 flex flex-col space-y-3 bg-[#08080a]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="tag-synthesized px-2 py-0.5 text-[9px] rounded font-mono font-bold">SYNTHESIZED</span>
-                  <span className="text-xs font-mono text-zinc-500">&lt; 0.5s LATENCY</span>
-                </div>
-                <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded p-0.5">
-                  {(['ts', 'zod', 'nextjs'] as const).map(s => (
-                    <button key={s} onClick={() => setDemoSchema(s)}
-                      className={`px-3 py-1 rounded text-[10px] font-mono uppercase transition-all ${
-                        demoSchema === s ? 'bg-zinc-800 text-zinc-100 font-bold' : 'text-zinc-500 hover:text-zinc-300'
-                      }`}>
-                      {s === 'ts' ? 'TypeScript' : s === 'zod' ? 'Zod' : 'Next.js'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={`${demoProvider}-${demoSchema}`}
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-                  className="flex-1 bg-zinc-900/40 border border-zinc-800 rounded-xl p-4 font-mono text-[10px] text-zinc-300 overflow-y-auto"
-                  style={{ minHeight: '240px', maxHeight: '300px' }}
-                >
-                  <pre className="leading-relaxed whitespace-pre">
-                    {demoSchema === 'ts' ? demo.ts : demoSchema === 'zod' ? demo.zod : demo.nextjs}
-                  </pre>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* ── MANIFESTO (Calyx style) ───────────────────────────────────────── */}
-      <section className="py-20 px-4 max-w-5xl mx-auto text-center border-t border-zinc-800/60 z-10 relative">
-        <FadeUp>
-          <span className="section-pill mb-6">WHY HOOKFLOW</span>
-          <p className="text-xl sm:text-3xl font-medium tracking-tight text-zinc-300 leading-snug max-w-4xl mx-auto font-sans">
-            Modern backend teams process webhooks in seconds. Debugging signature failures or payload schema mismatches can still take hours.{' '}
-            <span className="text-white font-bold">
-              HookFlow follows the evidence across headers and bodies, verifies HMAC secrets, and gives your team an instant path from incoming request to type-safe code.
-            </span>
+          <p className="text-xs sm:text-sm text-[#a1a1aa] max-w-xl mx-auto mb-8 leading-relaxed">
+            A self-hosted developer proxy for capturing raw webhook signals — sub-15ms WebSocket live streaming, cryptographic HMAC verification, and instant schema synthesis.
           </p>
-        </FadeUp>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-12">
+            <button
+              onClick={() => navigate('/console')}
+              className="btn primary text-xs py-2 px-4 font-semibold"
+            >
+              <span>Open Console</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={copyCmd}
+              className="btn text-xs py-2 px-3.5"
+              title="Copy local run command"
+            >
+              <span className="text-[#a1a1aa]">$</span>
+              <span>npm run dev</span>
+              <span className="ml-1 text-[#71717a]">
+                {cmdCopied ? <Check className="w-3.5 h-3.5 text-[#4ade80]" /> : <Copy className="w-3.5 h-3.5" />}
+              </span>
+            </button>
+          </div>
+
+          {/* ── Interactive Live Trace Simulator ─── */}
+          <div id="live-tour" className="w-full relative mt-4">
+            <LiveTraceSimulator />
+          </div>
+        </div>
+      </header>
+
+      {/* ── DEVELOPER CLI & ORIGIN TERMINAL ──────────────────────────────── */}
+      <section id="cli" className="py-16 px-4 max-w-4xl mx-auto text-center scroll-mt-20">
+        <div className="eyebrow mb-2">Developer Tools</div>
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white mb-3">
+          Local-First CLI & Ingestion Pipeline
+        </h2>
+        <p className="text-xs sm:text-sm text-[#a1a1aa] max-w-xl mx-auto mb-6 leading-relaxed">
+          Spin up local listeners, inspect HMAC signatures in real-time, or synthesize schemas directly from your terminal.
+        </p>
+
+        <div className="term">
+          <div className="term-bar">
+            <div className="flex items-center gap-2">
+              <span className="ttl">hookflow-cli v1.0.0</span>
+              <div className="flex items-center bg-[#0a0a0a] border border-[#222222] rounded p-0.5 ml-3">
+                <button
+                  onClick={() => setCliTab('listen')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors ${
+                    cliTab === 'listen' ? 'bg-white text-black font-semibold' : 'text-[#71717a] hover:text-white'
+                  }`}
+                >
+                  listen
+                </button>
+                <button
+                  onClick={() => setCliTab('verify')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors ${
+                    cliTab === 'verify' ? 'bg-white text-black font-semibold' : 'text-[#71717a] hover:text-white'
+                  }`}
+                >
+                  verify
+                </button>
+                <button
+                  onClick={() => setCliTab('synth')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors ${
+                    cliTab === 'synth' ? 'bg-white text-black font-semibold' : 'text-[#71717a] hover:text-white'
+                  }`}
+                >
+                  synth
+                </button>
+              </div>
+            </div>
+            <div className="winbtns">
+              <span onClick={() => setTermMinimized(!termMinimized)} title="Toggle view">
+                –
+              </span>
+            </div>
+          </div>
+
+          {!termMinimized && (
+            <pre className="min-h-[115px]">
+              {cliTab === 'listen' && (
+                <>
+                  <span className="cs">$</span> npx hookflow listen --port 4000 --tunnel<br />
+                  <span className="cm">[INFO] Ingestion tunnel live at:</span> https://hookflow.local/hook/ep_dev<br />
+                  <span className="cm">[INFO] WebSocket stream bound:</span> ws://localhost:4000<br />
+                  <span className="text-[#4ade80]">✓ Ready to catch webhooks with sub-15ms broadcast</span>
+                </>
+              )}
+              {cliTab === 'verify' && (
+                <>
+                  <span className="cs">$</span> npx hookflow verify --provider stripe --secret whsec_test<br />
+                  <span className="cm">[HMAC] Inspecting stripe-signature header format...</span><br />
+                  <span className="text-[#4ade80]">✓ Header matched: t=1700000000,v1=sha256...</span><br />
+                  <span className="text-[#4ade80]">✓ timingSafeEqual check PASSED (0.04ms)</span>
+                </>
+              )}
+              {cliTab === 'synth' && (
+                <>
+                  <span className="cs">$</span> npx hookflow synth --from ./payload.json --target zod<br />
+                  <span className="cm">[AST] Ingested 18 JSON keys, inferred strict schema...</span><br />
+                  <span className="text-white">export const WebhookEventSchema = z.object(&#123; ... &#125;);</span><br />
+                  <span className="text-[#4ade80]">✓ Synthesized in 0.28s without manual typings</span>
+                </>
+              )}
+            </pre>
+          )}
+        </div>
       </section>
 
-      {/* ── SIGNAL BANNER (Calyx style) ─────────────────────────────────── */}
-      <section className="py-12 border-y border-zinc-800/80 bg-[#060608]">
-        <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-zinc-800/80">
+      {/* ── SIGNAL BANNER ─────────────────────────────────────────────────── */}
+      <section className="py-12 border-y border-[#222222] bg-black">
+        <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[#222222]">
           <div className="py-4 md:py-0 md:px-8 text-left">
-            <span className="text-[10px] font-mono text-zinc-500 font-bold uppercase tracking-widest">01 / DISCOVERY</span>
-            <h3 className="text-sm font-bold text-zinc-100 mt-1 mb-1">ONE TIMELINE</h3>
-            <p className="text-xs text-zinc-400 leading-relaxed font-mono">
-              Headers, bodies, signatures, and responses connected inside one durable live inspector stream.
+            <span className="text-[11px] font-mono text-[#71717a] font-medium uppercase tracking-wider">01 / DISCOVERY</span>
+            <h3 className="text-sm font-semibold text-white mt-1 mb-1">ONE TIMELINE</h3>
+            <p className="text-xs text-[#a1a1aa] leading-relaxed font-mono">
+              Headers, bodies, signatures, and responses connected inside one durable live stream.
             </p>
           </div>
 
           <div className="py-4 md:py-0 md:px-8 text-left">
-            <span className="text-[10px] font-mono text-zinc-500 font-bold uppercase tracking-widest">02 / SECURITY</span>
-            <span className="tag-verified px-2 py-0.5 text-[9px] rounded font-mono font-bold ml-2">SAFE ACTION</span>
-            <h3 className="text-sm font-bold text-zinc-100 mt-1 mb-1">HMAC SHA-256 VERIFIED</h3>
-            <p className="text-xs text-zinc-400 leading-relaxed font-mono">
-              Cryptographic verification with timing-safe comparison prevents unauthorized test payloads.
+            <span className="text-[11px] font-mono text-[#71717a] font-medium uppercase tracking-wider">02 / SECURITY</span>
+            <h3 className="text-sm font-semibold text-white mt-1 mb-1">HMAC SHA-256 VERIFIED</h3>
+            <p className="text-xs text-[#a1a1aa] leading-relaxed font-mono">
+              Cryptographic verification with timingSafeEqual prevents spoofed payload bugs.
             </p>
           </div>
 
           <div className="py-4 md:py-0 md:px-8 text-left">
-            <span className="text-[10px] font-mono text-zinc-500 font-bold uppercase tracking-widest">03 / SYNTHESIS</span>
-            <h3 className="text-sm font-bold text-zinc-100 mt-1 mb-1">ZERO MANUAL TYPES</h3>
-            <p className="text-xs text-zinc-400 leading-relaxed font-mono">
-              Gemini 2.5 Flash &amp; AST engines convert raw JSON into Zod &amp; TypeScript schemas in &lt; 0.5s.
+            <span className="text-[11px] font-mono text-[#71717a] font-medium uppercase tracking-wider">03 / SYNTHESIS</span>
+            <h3 className="text-sm font-semibold text-white mt-1 mb-1">ZERO MANUAL TYPES</h3>
+            <p className="text-xs text-[#a1a1aa] leading-relaxed font-mono">
+              AST engines generate Zod schemas and TypeScript interfaces in &lt; 0.3s.
             </p>
           </div>
         </div>
       </section>
 
-      {/* ── FEATURES GRID (Calyx Capability Deck - Equal Height & Checklists) ── */}
-      <section id="features" className="py-24 px-4 max-w-6xl mx-auto scroll-mt-20">
-        <FadeUp>
-          <div className="mb-14">
-            <span className="section-pill mb-3">PLATFORM CAPABILITIES</span>
-            <h2 className="text-3xl font-bold tracking-tight text-white mb-3">
-              Engineered for Modern Backend Workflows
-            </h2>
-            <p className="text-sm text-zinc-400 max-w-xl leading-relaxed">
-              A complete route from raw HTTP webhook signal to evidence-backed TypeScript & Zod schemas.
-            </p>
-          </div>
-        </FadeUp>
+      {/* ── PLATFORM CAPABILITIES (Features) ─────────────────────────────── */}
+      <section id="features" className="py-24 px-4 max-w-6xl mx-auto scroll-mt-20 space-y-24">
+        {/* Interactive 3-Card Showcase & How It Works */}
+        <InteractiveFeatureGrid />
 
-        {/* 3x2 Equal Height Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
+        <div>
+          <FadeUp>
+            <div className="text-center mb-14">
+              <div className="text-[11px] text-[#71717a] font-mono tracking-wider uppercase mb-2">Platform Capabilities</div>
+              <h2 className="text-xl sm:text-3xl font-semibold tracking-tight text-white mb-2">
+                Full-Stack Architecture & Tooling
+              </h2>
+              <p className="text-xs sm:text-sm text-[#a1a1aa] max-w-xl mx-auto leading-relaxed">
+                A complete route from raw inbound HTTP webhooks to evidence-backed TypeScript & Zod schemas.
+              </p>
+            </div>
+          </FadeUp>
+
+          {/* 3x2 Feature Card Deck */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           <FadeUp delay={0.05} className="h-full">
             <FeatureCard
               index="01"
               tag="EVENT BUS"
-              accentColor="emerald"
-              icon={<Zap className="w-4 h-4 text-emerald-400" />}
+              icon={<Zap className="w-5 h-5 text-white" />}
               title="Sub-15ms WebSocket Stream"
-              description="Persistent WebSocket channel streams raw headers, query parameters, and JSON bodies."
+              description="Persistent WebSocket channel streams raw headers, query parameters, and JSON bodies directly to your dashboard."
               items={[
                 "Sub-15ms push to dashboard",
                 "Automatic ping/pong heartbeat",
@@ -635,8 +566,7 @@ export const LandingPage: React.FC = () => {
             <FeatureCard
               index="02"
               tag="VERIFICATION"
-              accentColor="blue"
-              icon={<ShieldCheck className="w-4 h-4 text-sky-400" />}
+              icon={<ShieldCheck className="w-5 h-5 text-[#4ade80]" />}
               title="HMAC Signature Inspector"
               description="Timing-safe signature comparison for Stripe, GitHub, Shopify, and Clerk."
               items={[
@@ -652,16 +582,15 @@ export const LandingPage: React.FC = () => {
             <FeatureCard
               index="03"
               tag="AI ENGINE"
-              accentColor="violet"
-              icon={<Sparkles className="w-4 h-4 text-purple-400" />}
+              icon={<Sparkles className="w-5 h-5 text-white" />}
               title="AI Schema Synthesizer"
-              description="Synthesize TypeScript interfaces, Zod schemas, and Next.js handlers in < 0.5s."
+              description="Synthesize TypeScript interfaces, Zod schemas, and Next.js handlers in under 0.5s."
               items={[
-                "Gemini 2.5 Flash LLM engine",
+                "Gemini Flash LLM engine",
                 "Offline AST fallback engine",
                 "Zod & TypeScript export"
               ]}
-              meta="GEMINI 2.5 + AST"
+              meta="GEMINI + AST"
             />
           </FadeUp>
 
@@ -669,10 +598,9 @@ export const LandingPage: React.FC = () => {
             <FeatureCard
               index="04"
               tag="REPLAYER"
-              accentColor="amber"
-              icon={<RefreshCw className="w-4 h-4 text-amber-400" />}
+              icon={<RefreshCw className="w-5 h-5 text-[#fbbf24]" />}
               title="1-Click Localhost Replayer"
-              description="Edit headers or body payload, then re-broadcast captured webhooks to local servers."
+              description="Edit headers or body payload, then re-broadcast captured webhooks directly to local dev servers."
               items={[
                 "Forward to localhost:3000",
                 "Round-trip status & latency",
@@ -686,10 +614,9 @@ export const LandingPage: React.FC = () => {
             <FeatureCard
               index="05"
               tag="PERSISTENCE"
-              accentColor="rose"
-              icon={<Activity className="w-4 h-4 text-rose-400" />}
+              icon={<Activity className="w-5 h-5 text-white" />}
               title="Persistent Event Timeline"
-              description="Every incoming payload is stored locally with full headers and execution telemetry."
+              description="Every incoming payload is stored locally in an embedded database with full headers and telemetry."
               items={[
                 "Embedded JSON event store",
                 "Instant search & status filter",
@@ -702,81 +629,30 @@ export const LandingPage: React.FC = () => {
           <FadeUp delay={0.3} className="h-full">
             <FeatureCard
               index="06"
-              tag="ENDPOINTS"
-              accentColor="cyan"
-              icon={<Globe className="w-4 h-4 text-cyan-400" />}
+              tag="TUNNELS"
+              icon={<Globe className="w-5 h-5 text-white" />}
               title="Dynamic Ingestion Tunnels"
               description="Instantly generate dynamic ingestion endpoints mapped to custom secrets and providers."
-              meta="DYNAMIC TUNNELS"
               items={[
                 "Unique /hook/:endpointId URLs",
                 "Provider secret mapping",
                 "Multi-inbox workspace"
               ]}
+              meta="DYNAMIC TUNNELS"
             />
           </FadeUp>
         </div>
+        </div>
       </section>
 
-      {/* ── WORKFLOW CONTROL GRID (Calyx Safety Workflow style) ─────────── */}
-      <section className="py-20 px-4 max-w-6xl mx-auto border-t border-zinc-800/60">
-        <FadeUp>
-          <div className="mb-12 text-left">
-            <span className="section-pill mb-3">WORKFLOW CONTROL</span>
-            <h2 className="text-3xl font-bold tracking-tight text-white mb-2">
-              THE DEVELOPMENT LOOP
-            </h2>
-            <p className="text-xs font-mono text-zinc-400">
-              FOUR STEPS FROM INBOUND WEBHOOK TO PRODUCTION CODE.
-            </p>
-          </div>
-        </FadeUp>
-
-        <FadeUp delay={0.1}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-5 rounded-xl border border-zinc-800 bg-[#08080a] text-left relative overflow-hidden group hover:border-zinc-600 transition-colors">
-              <span className="font-mono text-xs font-bold text-zinc-600 mb-2 block">01 / CATCH</span>
-              <h3 className="text-sm font-bold text-zinc-100 mb-1">INGEST PAYLOAD</h3>
-              <p className="text-xs text-zinc-400 font-mono leading-relaxed">
-                Raw HTTP POST request captured with exact byte preservation.
-              </p>
-            </div>
-
-            <div className="p-5 rounded-xl border border-zinc-800 bg-[#08080a] text-left relative overflow-hidden group hover:border-zinc-600 transition-colors">
-              <span className="font-mono text-xs font-bold text-emerald-500 mb-2 block">02 / VERIFY</span>
-              <h3 className="text-sm font-bold text-zinc-100 mb-1">CHECK SIGNATURE</h3>
-              <p className="text-xs text-zinc-400 font-mono leading-relaxed">
-                HMAC-SHA256 verified against provider secret.
-              </p>
-            </div>
-
-            <div className="p-5 rounded-xl border border-zinc-800 bg-[#08080a] text-left relative overflow-hidden group hover:border-zinc-600 transition-colors">
-              <span className="font-mono text-xs font-bold text-purple-400 mb-2 block">03 / SYNTHESIZE</span>
-              <h3 className="text-sm font-bold text-zinc-100 mb-1">GENERATE SCHEMAS</h3>
-              <p className="text-xs text-zinc-400 font-mono leading-relaxed">
-                Zod & TypeScript types created automatically in &lt; 0.5s.
-              </p>
-            </div>
-
-            <div className="p-5 rounded-xl border border-zinc-800 bg-[#08080a] text-left relative overflow-hidden group hover:border-zinc-600 transition-colors">
-              <span className="font-mono text-xs font-bold text-amber-400 mb-2 block">04 / REPLAY</span>
-              <h3 className="text-sm font-bold text-zinc-100 mb-1">FORWARD TO LOCAL</h3>
-              <p className="text-xs text-zinc-400 font-mono leading-relaxed">
-                1-click re-broadcast to localhost:3000 with latency metrics.
-              </p>
-            </div>
-          </div>
-        </FadeUp>
-      </section>
-
-      {/* ── ARCHITECTURE ─────────────────────────────────────────────────── */}
-      <section id="architecture" className="py-24 px-4 max-w-6xl mx-auto border-t border-zinc-800/40 scroll-mt-20">
+      {/* ── ARCHITECTURE SECTION ─────────────────────────────────────────── */}
+      <section id="architecture" className="py-24 px-4 max-w-6xl mx-auto border-t border-[#222222] scroll-mt-20">
         <FadeUp>
           <div className="mb-14">
-            <p className="text-[10px] font-mono text-zinc-700 mb-3 tracking-widest uppercase">How it works</p>
-            <h2 className="text-3xl font-bold tracking-tight text-white mb-3">System Architecture</h2>
-            <p className="text-sm text-zinc-500 max-w-xl leading-relaxed">
-              HookFlow acts as a local reverse proxy. Webhooks hit the ingestion server, get verified, stored, and broadcast to the dashboard in real-time — all on your machine. Click any step to learn more.
+            <div className="eyebrow mb-2">How It Works</div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-3">System Architecture</h2>
+            <p className="text-xs sm:text-sm text-[#a1a1aa] max-w-xl leading-relaxed">
+              HookFlow acts as a local reverse proxy. Webhooks hit the ingestion server, get verified, stored, and broadcast to the dashboard in real-time.
             </p>
           </div>
         </FadeUp>
@@ -784,32 +660,29 @@ export const LandingPage: React.FC = () => {
         <FadeUp delay={0.1}>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
             {/* Clickable flow nodes */}
-            <div className="space-y-3.5 flex flex-col justify-between">
+            <div className="space-y-3 flex flex-col justify-between">
               {ARCH_NODES.map((node, i) => (
                 <div key={node.id} className="flex-1 flex flex-col justify-center">
                   <button
                     onClick={() => setActiveNode(activeNode === node.id ? null : node.id)}
-                    className={`w-full flex items-center gap-3 p-4 rounded-xl border transition-all duration-200 text-left group ${
+                    className={`w-full flex items-center gap-3 p-3.5 rounded-lg border transition-all duration-200 text-left ${
                       activeNode === node.id
-                        ? `${node.bg} ${node.border} shadow-[2px_2px_0_#09090b]`
-                        : 'bg-zinc-950 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/50'
+                        ? 'bg-[#141414] border-white'
+                        : 'bg-[#0a0a0a] border-[#222222] hover:border-[#444444]'
                     }`}
                   >
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border transition-all ${
-                      activeNode === node.id ? `${node.bg} ${node.border}` : 'bg-zinc-900 border-zinc-800 group-hover:border-zinc-700'
-                    }`}>
+                    <div className="w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0 border border-[#222222] bg-black">
                       <node.icon className={`w-4 h-4 ${node.color}`} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold text-zinc-200">{node.label}</div>
-                      <div className="text-[10px] font-mono text-zinc-600 truncate">{node.sublabel}</div>
+                      <div className="text-xs font-semibold text-white">{node.label}</div>
+                      <div className="text-[11px] font-mono text-[#71717a] truncate">{node.sublabel}</div>
                     </div>
-                    <Badge variant={activeNode === node.id ? 'success' : 'outline'} className="flex-shrink-0">
+                    <Badge variant={activeNode === node.id ? 'default' : 'outline'} className="flex-shrink-0">
                       Step {i + 1}
                     </Badge>
                   </button>
 
-                  {/* Expanded explanation */}
                   <AnimatePresence>
                     {activeNode === node.id && (
                       <motion.div
@@ -819,7 +692,7 @@ export const LandingPage: React.FC = () => {
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <div className="mx-1 mt-1 px-4 py-3 rounded-lg bg-zinc-900/60 border border-zinc-800 text-xs text-zinc-400 leading-relaxed">
+                        <div className="mx-1 mt-1 px-4 py-3 rounded-md bg-[#0a0a0a] border border-[#222222] text-xs text-[#a1a1aa] leading-relaxed">
                           {node.desc}
                         </div>
                       </motion.div>
@@ -829,29 +702,28 @@ export const LandingPage: React.FC = () => {
               ))}
             </div>
 
-            {/* Terminal log showing actual server output */}
-            <TerminalWindow title="hookflow · server log" className="h-full min-h-[460px] flex flex-col justify-between">
-              <div className="space-y-1.5 text-[11px] font-mono leading-relaxed p-1">
-                <div className="text-zinc-700">$ <span className="text-zinc-400">npx tsx server/index.ts</span></div>
-                <div className="text-zinc-700 mt-2">◇ injected env (0) from .env</div>
-                <div className="text-zinc-600">[DB] Embedded JSON store ready</div>
-                <div className="text-zinc-700 mt-1">═══════════════════════════════════</div>
-                <div className="text-emerald-400 mt-1">✓ Server on http://localhost:<span className="text-emerald-300">4000</span></div>
-                <div className="text-sky-400">✓ WebSocket on ws://localhost:<span className="text-sky-300">4000</span></div>
-                <div className="text-zinc-500">✓ Ingestion: /hook/<span className="text-zinc-400">:endpointId</span></div>
-                <div className="text-zinc-500">✓ Dashboard: http://localhost:<span className="text-zinc-400">3000</span></div>
-                <div className="text-zinc-700 mt-1">═══════════════════════════════════</div>
-                <div className="text-zinc-500 mt-2">[WS] Client connected 127.0.0.1</div>
-                <div className="text-emerald-500">[HOOK] POST /hook/ep_stripe → <span className="text-emerald-400">verified</span></div>
-                <div className="text-sky-500">[WS] NEW_EVENT → <span className="text-sky-400">1</span> client <span className="text-zinc-600">(8ms)</span></div>
-                <div className="text-zinc-600">[DB] Event saved: evt_1788275651</div>
-                <div className="text-purple-400">[AI] Schema synthesized in <span className="text-purple-300">0.3s</span></div>
-                <div className="text-emerald-500">[REPLAY] → localhost:3000 <span className="text-emerald-400">200 OK</span> <span className="text-zinc-600">(11ms)</span></div>
-                <div className="text-zinc-700 mt-2 flex items-center gap-1">
-                  <motion.span
-                    animate={{ opacity: [1, 0, 1] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                  >█</motion.span>
+            {/* Terminal log */}
+            <TerminalWindow title="hookflow-server.log" className="h-full min-h-[460px] flex flex-col justify-between">
+              <div className="space-y-1 text-xs font-mono leading-relaxed p-1">
+                <div className="text-[#a1a1aa]">$ <span className="text-white">npm run dev</span></div>
+                <div className="text-[#71717a] mt-2">◇ loaded env from .env</div>
+                <div className="text-[#71717a]">[DB] Embedded JSON store ready</div>
+                <div className="text-[#222222] mt-1">───────────────────────────────────</div>
+                <div className="text-[#4ade80] mt-1">✓ Server on http://localhost:<span className="text-white">4000</span></div>
+                <div className="text-white">✓ WebSocket on ws://localhost:<span className="text-white">4000</span></div>
+                <div className="text-[#a1a1aa]">✓ Ingestion: /hook/<span className="text-white">:endpointId</span></div>
+                <div className="text-[#a1a1aa]">✓ Dashboard: http://localhost:<span className="text-white">3000</span></div>
+                <div className="text-[#222222] mt-1">───────────────────────────────────</div>
+                <div className="text-[#71717a] mt-2">[WS] Client connected 127.0.0.1</div>
+                <div className="text-[#4ade80]">[HOOK] POST /hook/ep_stripe → verified (HMAC-SHA256)</div>
+                <div className="text-white">[WS] NEW_EVENT → broadcasted (8ms)</div>
+                <div className="text-[#71717a]">[DB] Event saved: evt_1788275651</div>
+                <div className="text-[#a1a1aa]">[AI] Schema synthesized in 0.3s</div>
+                <div className="text-[#4ade80]">[REPLAY] → localhost:3000 200 OK (11ms)</div>
+                <div className="text-white mt-2 flex items-center gap-1">
+                  <motion.span animate={{ opacity: [1, 0, 1] }} transition={{ duration: 1, repeat: Infinity }}>
+                    █
+                  </motion.span>
                 </div>
               </div>
             </TerminalWindow>
@@ -860,14 +732,13 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ── AI SYNTHESIZER ───────────────────────────────────────────────── */}
-      <section id="ai-synthesizer" className="py-24 px-4 max-w-6xl mx-auto border-t border-zinc-800/40 scroll-mt-20">
+      <section id="ai-synthesizer" className="py-24 px-4 max-w-6xl mx-auto border-t border-[#222222] scroll-mt-20">
         <FadeUp>
           <div className="mb-14">
-            <p className="text-[10px] font-mono text-zinc-700 mb-3 tracking-widest uppercase">Built-in AI</p>
-            <h2 className="text-3xl font-bold tracking-tight text-white mb-3">AI Schema Synthesizer</h2>
-            <p className="text-sm text-zinc-500 max-w-xl leading-relaxed">
-              Paste any webhook JSON below. HookFlow generates production-ready TypeScript interfaces, Zod validation schemas, and Next.js App Router handlers.{' '}
-              <span className="text-zinc-300">Gemini 2.5 Flash</span> when an API key is set — falls back to the offline AST engine instantly.
+            <div className="eyebrow mb-2">Automated Typings</div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-3">AI Schema Synthesizer</h2>
+            <p className="text-xs sm:text-sm text-[#a1a1aa] max-w-xl leading-relaxed">
+              Paste any webhook JSON below. HookFlow generates production-ready TypeScript interfaces, Zod validation schemas, and Next.js App Router handlers in seconds.
             </p>
           </div>
         </FadeUp>
@@ -877,39 +748,48 @@ export const LandingPage: React.FC = () => {
             {/* Input */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-zinc-400">JSON Payload</span>
-                <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-lg p-0.5">
+                <span className="text-xs font-medium text-white">JSON Payload</span>
+                <div className="flex items-center bg-[#0a0a0a] border border-[#222222] rounded p-0.5">
                   {(['stripe', 'github', 'shopify'] as ProviderKey[]).map(p => (
-                    <button key={p} onClick={() => handleSynthProvider(p)}
-                      className={`px-2.5 py-1 rounded-md text-[10px] font-mono capitalize transition-all ${
-                        synthProvider === p ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-600 hover:text-zinc-400'
-                      }`}>{p}</button>
+                    <button
+                      key={p}
+                      onClick={() => handleSynthProvider(p)}
+                      className={`px-2.5 py-1 rounded text-[10px] font-mono capitalize transition-all ${
+                        synthProvider === p ? 'bg-white text-black font-semibold' : 'text-[#71717a] hover:text-white'
+                      }`}
+                    >
+                      {p}
+                    </button>
                   ))}
                 </div>
               </div>
+
               <textarea
                 value={customJson}
                 onChange={e => setCustomJson(e.target.value)}
-                className="w-full h-80 rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 font-mono text-[11px] text-zinc-300 resize-none focus:outline-none focus:border-zinc-600 transition-colors leading-relaxed"
+                className="w-full h-80 rounded-lg border border-[#222222] bg-[#0a0a0a] p-4 font-mono text-xs text-[#e4e4e7] resize-none focus:outline-none focus:border-white transition-colors leading-relaxed selection:bg-[#262626]"
                 spellCheck={false}
                 placeholder="Paste any JSON webhook payload here…"
               />
-              <div className="flex items-center gap-2 text-[10px] text-zinc-700">
-                <Cpu className="w-3 h-3" />
-                <span>Engine: Gemini 2.5 Flash → Offline AST fallback</span>
+              <div className="flex items-center gap-2 text-[11px] text-[#71717a]">
+                <Cpu className="w-3.5 h-3.5 text-white" />
+                <span>Engine: Gemini Flash → Offline AST fallback</span>
               </div>
             </div>
 
             {/* Output */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-zinc-400">Generated Code</span>
-                <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-lg p-0.5">
+                <span className="text-xs font-medium text-white">Generated Code</span>
+                <div className="flex items-center bg-[#0a0a0a] border border-[#222222] rounded p-0.5">
                   {(['typescript', 'zod', 'nextjs'] as SchemaKey[]).map(s => (
-                    <button key={s} onClick={() => setSynthSchema(s)}
-                      className={`px-2.5 py-1 rounded-md text-[10px] font-mono transition-all ${
-                        synthSchema === s ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-600 hover:text-zinc-400'
-                      }`}>
+                    <button
+                      key={s}
+                      onClick={() => setSynthSchema(s)}
+                      className={`px-2.5 py-1 rounded text-[10px] font-mono transition-all ${
+                        synthSchema === s ? 'bg-white text-black font-semibold' : 'text-[#71717a] hover:text-white'
+                      }`}
+                    >
                       {s === 'typescript' ? 'TypeScript' : s === 'zod' ? 'Zod Schema' : 'Next.js'}
                     </button>
                   ))}
@@ -919,7 +799,10 @@ export const LandingPage: React.FC = () => {
               <AnimatePresence mode="wait">
                 <motion.div
                   key={`${synthProvider}-${synthSchema}`}
-                  initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
                 >
                   <CodeBlock
                     code={SYNTHESIZED[synthProvider]?.[synthSchema] ?? '// Select a provider above'}
@@ -929,8 +812,8 @@ export const LandingPage: React.FC = () => {
               </AnimatePresence>
 
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="success">Production-ready</Badge>
-                <Badge variant="default">Type-safe</Badge>
+                <Badge variant="outline">Production-ready</Badge>
+                <Badge variant="outline">Type-safe</Badge>
                 <Badge variant="outline">Copy &amp; paste</Badge>
               </div>
             </div>
@@ -939,85 +822,87 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ── PROVIDERS ────────────────────────────────────────────────────── */}
-      <section id="providers" className="py-20 px-4 max-w-6xl mx-auto border-t border-zinc-800/40 scroll-mt-20">
+      <section id="providers" className="py-20 px-4 max-w-6xl mx-auto border-t border-[#222222] scroll-mt-20">
         <FadeUp>
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold tracking-tight text-white mb-2">Supported Providers</h2>
-            <p className="text-xs text-zinc-600">Pre-configured HMAC signing schemes and mock payloads for every major service.</p>
+          <div className="mb-10 text-left">
+            <div className="eyebrow mb-2">Supported Integrations</div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-2">Supported Providers</h2>
+            <p className="text-xs text-[#a1a1aa]">Pre-configured HMAC signing schemes and mock payloads for every major service.</p>
           </div>
         </FadeUp>
 
         <FadeUp delay={0.1}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { name: 'Stripe', header: 'stripe-signature', algo: 'HMAC-SHA256 (t+v1)', dot: 'bg-emerald-400' },
-              { name: 'GitHub', header: 'x-hub-signature-256', algo: 'HMAC-SHA256', dot: 'bg-sky-400' },
-              { name: 'Shopify', header: 'x-shopify-hmac-sha256', algo: 'Base64 HMAC', dot: 'bg-purple-400' },
-              { name: 'Clerk / Svix', header: 'svix-signature', algo: 'Base64 HMAC-SHA256', dot: 'bg-amber-400' },
-              { name: 'Twilio', header: 'x-twilio-signature', algo: 'HMAC-SHA1', dot: 'bg-rose-400' },
-              { name: 'Discord', header: 'x-signature-ed25519', algo: 'Ed25519', dot: 'bg-indigo-400' },
-              { name: 'Slack', header: 'x-slack-signature', algo: 'v0=HMAC-SHA256', dot: 'bg-teal-400' },
-              { name: 'Custom HMAC', header: 'x-signature', algo: 'Custom Secret', dot: 'bg-zinc-400' },
+              { name: 'Stripe', header: 'stripe-signature', algo: 'HMAC-SHA256 (t+v1)', dot: 'bg-[#4ade80]' },
+              { name: 'GitHub', header: 'x-hub-signature-256', algo: 'HMAC-SHA256', dot: 'bg-white' },
+              { name: 'Shopify', header: 'x-shopify-hmac-sha256', algo: 'Base64 HMAC', dot: 'bg-white' },
+              { name: 'Clerk / Svix', header: 'svix-signature', algo: 'Base64 HMAC-SHA256', dot: 'bg-white' },
+              { name: 'Twilio', header: 'x-twilio-signature', algo: 'HMAC-SHA1', dot: 'bg-[#f87171]' },
+              { name: 'Discord', header: 'x-signature-ed25519', algo: 'Ed25519', dot: 'bg-white' },
+              { name: 'Slack', header: 'x-slack-signature', algo: 'v0=HMAC-SHA256', dot: 'bg-[#4ade80]' },
+              { name: 'Custom HMAC', header: 'x-signature', algo: 'Custom Secret', dot: 'bg-[#71717a]' },
             ].map(item => (
-              /* Neo-brutalism provider cards */
               <div
                 key={item.name}
-                className="p-4 rounded-xl border border-zinc-700 bg-zinc-950 hover:bg-zinc-900/80 transition-all duration-200 shadow-[2px_2px_0_#18181b] hover:shadow-[3px_3px_0_#27272a] hover:-translate-y-px cursor-default select-none"
+                className="p-4 rounded-lg border border-[#222222] bg-[#0a0a0a] hover:border-[#444444] transition-all duration-150 hover:-translate-y-0.5 cursor-default select-none"
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${item.dot}`} />
-                  <span className="font-semibold text-xs text-zinc-200">{item.name}</span>
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${item.dot}`} />
+                  <span className="font-semibold text-xs text-white">{item.name}</span>
                 </div>
-                <div className="text-[10px] font-mono text-zinc-600 truncate">{item.header}</div>
-                <div className="text-[10px] text-zinc-700 mt-0.5">{item.algo}</div>
+                <div className="text-[10px] font-mono text-[#71717a] truncate">{item.header}</div>
+                <div className="text-[10px] text-[#71717a] mt-0.5">{item.algo}</div>
               </div>
             ))}
           </div>
         </FadeUp>
       </section>
 
-      {/* ── FINAL CTA (Calyx style) ─────────────────────────────────────── */}
-      <section className="py-24 px-4 max-w-5xl mx-auto border-t border-zinc-800/60 text-center relative z-10">
+      {/* ── GET STARTED / CALL TO ACTION ─────────────────────────────────── */}
+      <section id="start" className="py-24 px-4 max-w-4xl mx-auto border-t border-[#222222] text-center">
         <FadeUp>
-          <span className="section-pill mb-6">READY FOR PRODUCTION</span>
-          <h2 className="text-4xl sm:text-6xl font-bold tracking-tight text-white mb-4 uppercase font-sans">
-            BE READY<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-b from-zinc-300 to-zinc-600">
-              BEFORE IMPACT.
-            </span>
-          </h2>
-          <p className="text-xs sm:text-sm font-mono text-zinc-400 max-w-xl mx-auto mb-10 leading-relaxed">
-            Give every developer a clear path from inbound webhook signal to type-safe production code.
-          </p>
+          <div className="p-10 rounded-xl border border-[#222222] bg-[#0a0a0a] shadow-2xl">
+            <div className="eyebrow mb-2">Ready to Deploy</div>
+            <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-white mb-3">
+              Deploy HookFlow locally today.
+            </h2>
+            <p className="text-xs sm:text-sm text-[#a1a1aa] max-w-lg mx-auto mb-6 leading-relaxed">
+              Open source, self-hosted, and free. No sales teams, no cloud locks, no telemetry.
+            </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 mb-12">
-            <button
-              onClick={() => navigate('/console')}
-              className="cut-button bg-zinc-100 text-zinc-950 hover:bg-white font-mono font-bold text-xs px-8 py-3.5 flex items-center gap-2 transition-all tracking-widest uppercase shadow-xl shadow-white/5"
-            >
-              <span>OPEN CONSOLE</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
+            <div className="codeblock max-w-md mx-auto">
+              <span><span className="prompt">$</span> git clone https://github.com/hookflow/hookflow.git</span>
+            </div>
 
-          {/* Proof Badges (Calyx style) */}
-          <div className="flex flex-wrap items-center justify-center gap-6 text-[10px] font-mono text-zinc-500 font-bold border-t border-zinc-900 pt-8">
-            <span className="flex items-center gap-2"><b className="text-zinc-300">01</b> EVIDENCE GROUNDED</span>
-            <span className="flex items-center gap-2"><b className="text-zinc-300">02</b> HMAC VERIFIED</span>
-            <span className="flex items-center gap-2"><b className="text-zinc-300">03</b> AI SYNTHESIZED</span>
+            <div className="mt-6 flex justify-center gap-3">
+              <button
+                onClick={() => navigate('/console')}
+                className="btn primary text-sm py-2.5 px-6 font-bold"
+              >
+                <span>Launch Console</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-8 text-xs text-[#a1a1aa]">
+              <span className="section-pill">Self-hosted</span>
+              <span className="section-pill">Local-first</span>
+              <span className="section-pill">HMAC-verified</span>
+              <span className="section-pill">Zero telemetry</span>
+            </div>
           </div>
         </FadeUp>
       </section>
 
-      {/* ── FOOTER (Calyx style) ───────────────────────────────────────── */}
-      <footer className="border-t border-zinc-900 bg-[#020203] py-10 px-6 text-xs text-zinc-600 max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 font-mono">
-        <div className="flex items-center gap-3">
-          <span className="font-bold text-zinc-300 tracking-widest uppercase">HOOKFLOW</span>
-          <span className="text-zinc-600">— REAL-TIME WEBHOOK PROXY &amp; REPLAYER</span>
+      {/* ── FOOTER ───────────────────────────────────────────────────────── */}
+      <footer className="border-t border-[#222222] bg-black py-8 px-6 text-xs text-[#71717a] max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 font-mono">
+        <div className="flex items-center gap-2.5">
+          <span className="font-bold text-white tracking-wider">HOOKFLOW</span>
         </div>
 
         <div className="flex items-center gap-6">
-          <button onClick={() => navigate('/console')} className="text-zinc-400 hover:text-white transition-colors flex items-center gap-1 font-bold">
+          <button onClick={() => navigate('/console')} className="text-[#a1a1aa] hover:text-white transition-colors flex items-center gap-1 font-medium">
             OPEN CONSOLE →
           </button>
         </div>

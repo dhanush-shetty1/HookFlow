@@ -3,53 +3,71 @@ import { motion } from 'framer-motion';
 
 interface GlowingBadgeProps {
   children: React.ReactNode;
-  color?: 'emerald' | 'sky' | 'purple' | 'amber' | 'rose';
+  color?: 'emerald' | 'sky' | 'purple' | 'amber' | 'rose' | 'coral' | 'cyan' | 'green';
   className?: string;
 }
 
 export const GlowingBadge: React.FC<GlowingBadgeProps> = ({
   children,
-  color = 'emerald',
+  color = 'green',
   className = '',
 }) => {
   const colors: Record<string, { dot: string; glow: string; border: string; text: string }> = {
+    green: {
+      dot: 'bg-[#50fa7b]',
+      glow: 'bg-[#50fa7b]',
+      border: 'border-[#50fa7b]/40',
+      text: 'text-[#50fa7b]',
+    },
     emerald: {
-      dot: 'bg-emerald-400',
-      glow: 'bg-emerald-400',
-      border: 'border-emerald-900',
-      text: 'text-emerald-300',
+      dot: 'bg-[#50fa7b]',
+      glow: 'bg-[#50fa7b]',
+      border: 'border-[#50fa7b]/40',
+      text: 'text-[#50fa7b]',
+    },
+    cyan: {
+      dot: 'bg-[#9cdef2]',
+      glow: 'bg-[#9cdef2]',
+      border: 'border-[#355a66]',
+      text: 'text-[#9cdef2]',
     },
     sky: {
-      dot: 'bg-sky-400',
-      glow: 'bg-sky-400',
-      border: 'border-sky-900',
-      text: 'text-sky-300',
+      dot: 'bg-[#9cdef2]',
+      glow: 'bg-[#9cdef2]',
+      border: 'border-[#355a66]',
+      text: 'text-[#9cdef2]',
     },
-    purple: {
-      dot: 'bg-purple-400',
-      glow: 'bg-purple-400',
-      border: 'border-purple-900',
-      text: 'text-purple-300',
-    },
-    amber: {
-      dot: 'bg-amber-400',
-      glow: 'bg-amber-400',
-      border: 'border-amber-900',
-      text: 'text-amber-300',
+    coral: {
+      dot: 'bg-[#e06c75]',
+      glow: 'bg-[#e06c75]',
+      border: 'border-[#e06c75]/40',
+      text: 'text-[#e06c75]',
     },
     rose: {
-      dot: 'bg-rose-400',
-      glow: 'bg-rose-400',
-      border: 'border-rose-900',
-      text: 'text-rose-300',
+      dot: 'bg-[#e06c75]',
+      glow: 'bg-[#e06c75]',
+      border: 'border-[#e06c75]/40',
+      text: 'text-[#e06c75]',
+    },
+    purple: {
+      dot: 'bg-[#f0989e]',
+      glow: 'bg-[#f0989e]',
+      border: 'border-[#f0989e]/40',
+      text: 'text-[#f0989e]',
+    },
+    amber: {
+      dot: 'bg-[#f0ad4e]',
+      glow: 'bg-[#f0ad4e]',
+      border: 'border-[#f0ad4e]/40',
+      text: 'text-[#f0ad4e]',
     },
   };
 
-  const c = colors[color];
+  const c = colors[color] || colors.green;
 
   return (
     <div
-      className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border ${c.border} bg-zinc-950/80 backdrop-blur-sm ${className}`}
+      className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border ${c.border} bg-[#111111]/90 backdrop-blur-sm ${className}`}
     >
       <div className="relative flex">
         <span className={`w-2 h-2 rounded-full ${c.dot}`} />

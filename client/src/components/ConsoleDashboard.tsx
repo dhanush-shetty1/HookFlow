@@ -255,12 +255,10 @@ export const ConsoleDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-zinc-50 flex flex-col font-sans relative overflow-hidden">
-      {/* Shared background aesthetics matching landing page */}
+    <div className="min-h-screen bg-black text-[#e4e4e7] flex flex-col font-mono relative overflow-hidden selection:bg-[#262626] selection:text-white">
+      {/* Background aesthetics */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-grid-white opacity-20 [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,black_40%,transparent_100%)]" />
-        <div className="absolute top-1/4 left-1/3 w-96 h-96 rounded-full bg-indigo-500/3 blur-3xl animate-float-slow" />
-        <div className="absolute bottom-1/3 right-1/4 w-72 h-72 rounded-full bg-emerald-500/3 blur-3xl animate-float-slow" style={{ animationDelay: '-4s' }} />
+        <div className="absolute inset-0 bg-dot-odysseus opacity-40" />
       </div>
 
       {/* Content layers above background */}

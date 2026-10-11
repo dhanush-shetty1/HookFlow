@@ -14,10 +14,12 @@ import {
   Eye, 
   EyeOff,
   Code2,
-  Wand2
+  Wand2,
+  Webhook
 } from 'lucide-react';
 import { WebhookEvent, Endpoint, SchemaSynthesisResult, ForwardResponse } from '../types';
 import { api } from '../services/api';
+import { CodeBlock } from './ui/CodeBlock';
 
 interface EventDetailProps {
   event: WebhookEvent | null;
@@ -101,13 +103,13 @@ export const EventDetail: React.FC<EventDetailProps> = ({
 
   if (!event) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-zinc-500 p-8 h-[calc(100vh-3.5rem)] bg-zinc-950">
-        <div className="w-12 h-12 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-3 text-zinc-400">
-          <Terminal className="w-5 h-5" />
+      <div className="flex-1 flex flex-col items-center justify-center text-[#71717a] p-8 h-[calc(100vh-56px)] bg-black font-mono">
+        <div className="w-14 h-14 rounded-xl bg-[#0a0a0a] border border-[#222222] flex items-center justify-center mb-3 text-white shadow-lg">
+          <Webhook className="w-6 h-6" />
         </div>
-        <h3 className="text-sm font-medium text-zinc-300">No Request Selected</h3>
-        <p className="text-xs text-zinc-500 mt-1 max-w-sm text-center">
-          Select a request from the sidebar to inspect payload, headers, signature verification, and synthesize schemas.
+        <h3 className="text-sm font-semibold text-white">No Request Selected</h3>
+        <p className="text-xs text-[#71717a] mt-1 max-w-sm text-center leading-relaxed">
+          Select a request from the sidebar to inspect raw payload, headers, HMAC signature verification, and synthesize schemas.
         </p>
       </div>
     );
@@ -199,19 +201,19 @@ export const EventDetail: React.FC<EventDetailProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] bg-zinc-950 overflow-hidden">
+    <div className="flex-1 flex flex-col h-[calc(100vh-56px)] bg-black overflow-hidden font-mono text-[#e4e4e7]">
       {/* Event Header Banner */}
-      <div className="p-3.5 border-b border-zinc-800 bg-zinc-950 flex flex-wrap items-center justify-between gap-3">
+      <div className="p-3.5 border-b border-[#222222] bg-black flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="px-2 py-0.5 rounded text-xs font-mono font-semibold bg-zinc-900 border border-zinc-800 text-zinc-100 uppercase">
+          <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-[#0a0a0a] border border-[#222222] text-white uppercase">
             {event.method}
           </span>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-semibold text-zinc-100">{event.path}</span>
-              <span className="text-[11px] text-zinc-500 font-mono">({event.id})</span>
+              <span className="font-mono text-xs font-semibold text-white">{event.path}</span>
+              <span className="text-[11px] text-[#71717a] font-mono">({event.id})</span>
             </div>
-            <div className="flex items-center gap-2 text-[11px] text-zinc-500 font-mono mt-0.5">
+            <div className="flex items-center gap-2 text-[11px] text-[#71717a] font-mono mt-0.5">
               <span>{new Date(event.timestamp).toLocaleTimeString()}</span>
               <span>•</span>
               <span>{event.clientIp}</span>
@@ -224,38 +226,38 @@ export const EventDetail: React.FC<EventDetailProps> = ({
         {/* Status badges & Actions */}
         <div className="flex items-center gap-2">
           {event.signatureStatus === 'verified' && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-emerald-400 text-xs font-medium">
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-[#0a0a0a] border border-[#222222] text-[#4ade80] text-xs font-medium">
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Verified</span>
             </div>
           )}
           {event.signatureStatus === 'failed' && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-red-400 text-xs font-medium">
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-[#0a0a0a] border border-[#222222] text-[#f87171] text-xs font-medium">
               <ShieldAlert className="w-3.5 h-3.5" />
               <span>Invalid Signature</span>
             </div>
           )}
           {event.signatureStatus === 'missing_secret' && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-amber-400 text-xs font-medium">
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-[#0a0a0a] border border-[#222222] text-[#fbbf24] text-xs font-medium">
               <Shield className="w-3.5 h-3.5" />
               <span>No Secret</span>
             </div>
           )}
 
           {event.forwardResponse && (
-            <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-mono font-medium border bg-zinc-900 ${
+            <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-mono font-medium border bg-[#0a0a0a] ${
               event.forwardResponse.statusCode >= 200 && event.forwardResponse.statusCode < 400
-                ? 'text-emerald-400 border-zinc-800'
-                : 'text-red-400 border-zinc-800'
+                ? 'text-[#4ade80] border-[#222222]'
+                : 'text-[#f87171] border-[#222222]'
             }`}>
               <span>Forward: {event.forwardResponse.statusCode || 'ERR'}</span>
-              <span className="text-[10px] text-zinc-500">({event.forwardResponse.timeMs}ms)</span>
+              <span className="text-[10px] text-[#71717a]">({event.forwardResponse.timeMs}ms)</span>
             </div>
           )}
 
           <button
             onClick={() => setActiveTab('replayer')}
-            className="flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-medium px-3 py-1.5 rounded-md text-xs transition-colors"
+            className="btn primary text-xs py-1.5 px-3.5 font-bold"
           >
             <Play className="w-3 h-3 fill-current" />
             <span>Replay</span>
@@ -263,24 +265,24 @@ export const EventDetail: React.FC<EventDetailProps> = ({
 
           <button
             onClick={handleCopyCurl}
-            className="flex items-center gap-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 px-2.5 py-1.5 rounded-md text-xs font-mono transition-colors"
+            className="btn text-xs py-1.5 px-3"
             title="Copy cURL"
           >
-            {copiedCurl ? <Check className="w-3 h-3 text-emerald-400" /> : <Terminal className="w-3 h-3" />}
+            {copiedCurl ? <Check className="w-3 h-3 text-[#4ade80]" /> : <Terminal className="w-3 h-3" />}
             <span className="hidden md:inline">{copiedCurl ? 'Copied' : 'cURL'}</span>
           </button>
         </div>
       </div>
 
-      {/* Tabs Navigation (Shadcn Tabs style) */}
-      <div className="border-b border-zinc-800 bg-zinc-950 px-4 py-2 flex items-center gap-1 select-none">
-        <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 p-0.5 rounded-md text-xs">
+      {/* Tabs Navigation */}
+      <div className="border-b border-[#222222] bg-black px-4 py-2 flex items-center gap-1 select-none">
+        <div className="flex items-center gap-1 bg-[#0a0a0a] border border-[#222222] p-0.5 rounded-md text-xs">
           <button
             onClick={() => setActiveTab('payload')}
             className={`px-3 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition-colors ${
               activeTab === 'payload'
-                ? 'bg-zinc-800 text-zinc-50 shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'bg-white text-black font-semibold shadow-sm'
+                : 'text-[#71717a] hover:text-white'
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
@@ -291,8 +293,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({
             onClick={() => setActiveTab('headers')}
             className={`px-3 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition-colors ${
               activeTab === 'headers'
-                ? 'bg-zinc-800 text-zinc-50 shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'bg-white text-black font-semibold shadow-sm'
+                : 'text-[#71717a] hover:text-white'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
@@ -303,8 +305,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({
             onClick={() => setActiveTab('schema')}
             className={`px-3 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition-colors ${
               activeTab === 'schema'
-                ? 'bg-zinc-800 text-zinc-50 shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'bg-white text-black font-semibold shadow-sm'
+                : 'text-[#71717a] hover:text-white'
             }`}
           >
             <Code2 className="w-3.5 h-3.5" />
@@ -315,8 +317,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({
             onClick={() => setActiveTab('replayer')}
             className={`px-3 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition-colors ${
               activeTab === 'replayer'
-                ? 'bg-zinc-800 text-zinc-50 shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'bg-white text-black font-semibold shadow-sm'
+                : 'text-[#71717a] hover:text-white'
             }`}
           >
             <Zap className="w-3.5 h-3.5" />
@@ -327,8 +329,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({
             onClick={() => setActiveTab('signature')}
             className={`px-3 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition-colors ${
               activeTab === 'signature'
-                ? 'bg-zinc-800 text-zinc-50 shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'bg-white text-black font-semibold shadow-sm'
+                : 'text-[#71717a] hover:text-white'
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
@@ -338,38 +340,41 @@ export const EventDetail: React.FC<EventDetailProps> = ({
       </div>
 
       {/* Tab Contents */}
-      <div className="flex-1 overflow-y-auto p-4 bg-zinc-950">
+      <div className="flex-1 overflow-y-auto p-4 bg-black">
         {/* Tab: Payload */}
         {activeTab === 'payload' && (
           <div className="space-y-3 h-full flex flex-col">
             <div className="flex items-center justify-between">
-              <div className="text-xs font-medium text-zinc-400">
+              <div className="text-xs font-medium text-[#71717a]">
                 Inbound Payload ({typeof event.body === 'object' && event.body ? `${Object.keys(event.body).length} root keys` : 'raw'})
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setIsRawPayload(!isRawPayload)}
-                  className="px-2.5 py-1 text-xs font-medium rounded-md bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800 transition-colors"
+                  className="btn text-xs py-1 px-2.5"
                 >
                   {isRawPayload ? 'Formatted' : 'Raw'}
                 </button>
                 <button
                   onClick={() => handleCopyCode(typeof event.body === 'object' ? JSON.stringify(event.body, null, 2) : event.rawBody)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 transition-colors"
+                  className="btn text-xs py-1 px-2.5"
                 >
-                  {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copiedCode ? <Check className="w-3.5 h-3.5 text-[#4ade80]" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copiedCode ? 'Copied' : 'Copy'}</span>
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 font-mono text-xs overflow-auto text-zinc-200">
-              <pre className="whitespace-pre-wrap break-all leading-relaxed">
-                {isRawPayload 
-                  ? event.rawBody 
-                  : (typeof event.body === 'object' ? JSON.stringify(event.body, null, 2) : event.rawBody || '{}')}
-              </pre>
-            </div>
+            <CodeBlock
+              code={isRawPayload 
+                ? (event.rawBody || '') 
+                : (typeof event.body === 'object' ? JSON.stringify(event.body, null, 2) : event.rawBody || '{}')}
+              language="json"
+              filename={isRawPayload ? 'raw_payload.txt' : 'payload.json'}
+              showLineNumbers={true}
+              showDots={true}
+              maxHeight="max-h-[500px]"
+            />
           </div>
         )}
 
@@ -378,21 +383,21 @@ export const EventDetail: React.FC<EventDetailProps> = ({
           <div className="space-y-6">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <div className="text-xs font-medium text-zinc-400">
+                <div className="text-xs font-medium text-[#71717a]">
                   HTTP Request Headers ({Object.keys(event.headers).length})
                 </div>
                 <button
                   onClick={() => handleCopyCode(JSON.stringify(event.headers, null, 2))}
-                  className="text-xs text-zinc-400 hover:text-zinc-200"
+                  className="text-xs text-[#71717a] hover:text-white"
                 >
                   Copy JSON
                 </button>
               </div>
-              <div className="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-900/30 font-mono text-xs divide-y divide-zinc-800/60">
+              <div className="border border-[#222222] rounded-lg overflow-hidden bg-[#0a0a0a] font-mono text-xs divide-y divide-[#222222]">
                 {Object.entries(event.headers).map(([key, val]) => (
-                  <div key={key} className="flex items-start p-2.5 hover:bg-zinc-900/60 transition-colors">
-                    <div className="w-1/3 min-w-[180px] font-medium text-zinc-400 select-all pr-2">{key}</div>
-                    <div className="flex-1 text-zinc-200 break-all select-all">
+                  <div key={key} className="flex items-start p-2.5 hover:bg-[#141414] transition-colors">
+                    <div className="w-1/3 min-w-[180px] font-medium text-[#71717a] select-all pr-2">{key}</div>
+                    <div className="flex-1 text-white break-all select-all">
                       {Array.isArray(val) ? val.join(', ') : String(val)}
                     </div>
                   </div>
@@ -402,14 +407,14 @@ export const EventDetail: React.FC<EventDetailProps> = ({
 
             {event.query && Object.keys(event.query).length > 0 && (
               <div>
-                <div className="text-xs font-medium text-zinc-400 mb-2">
+                <div className="text-xs font-medium text-[#71717a] mb-2">
                   URL Query Parameters ({Object.keys(event.query).length})
                 </div>
-                <div className="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-900/30 font-mono text-xs divide-y divide-zinc-800/60">
+                <div className="border border-[#222222] rounded-lg overflow-hidden bg-[#0a0a0a] font-mono text-xs divide-y divide-[#222222]">
                   {Object.entries(event.query).map(([key, val]) => (
-                    <div key={key} className="flex items-start p-2.5 hover:bg-zinc-900/60">
-                      <div className="w-1/3 min-w-[180px] font-medium text-zinc-400 select-all">{key}</div>
-                      <div className="flex-1 text-zinc-200 break-all select-all">{String(val)}</div>
+                    <div key={key} className="flex items-start p-2.5 hover:bg-[#141414]">
+                      <div className="w-1/3 min-w-[180px] font-medium text-[#71717a] select-all">{key}</div>
+                      <div className="flex-1 text-white break-all select-all">{String(val)}</div>
                     </div>
                   ))}
                 </div>
@@ -422,30 +427,30 @@ export const EventDetail: React.FC<EventDetailProps> = ({
         {activeTab === 'schema' && (
           <div className="space-y-4">
             {synthesisResult?.insights && (
-              <div className="p-3.5 rounded-lg border border-zinc-800 bg-zinc-900/40 flex items-start justify-between gap-3">
+              <div className="p-3.5 rounded-lg border border-[#222222] bg-[#0a0a0a] flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-semibold text-zinc-200">
+                    <span className="text-xs font-semibold text-white">
                       {synthesisResult.insights.title || 'Synthesized Schema'}
                     </span>
-                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-black text-white border border-[#222222]">
                       {synthesisResult.insights.detectedProvider}
                     </span>
                     {synthesisResult.insights.hasPII && (
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-950/40 text-amber-400 border border-amber-800/50 flex items-center gap-1">
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#fbbf24]/10 text-[#fbbf24] border border-[#fbbf24]/30 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         PII: {synthesisResult.insights.piiFields.join(', ')}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-zinc-400 leading-relaxed">
+                  <p className="text-xs text-[#a1a1aa] leading-relaxed">
                     {synthesisResult.insights.summary}
                   </p>
                 </div>
                 <button
                   onClick={() => handleAutoSynthesize(event.body, true)}
                   disabled={isSynthesizing}
-                  className="px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-900 text-xs font-medium flex items-center gap-1.5 transition-colors disabled:opacity-50 shrink-0"
+                  className="btn primary text-xs py-1.5 px-3 shrink-0 font-bold"
                 >
                   <Wand2 className="w-3.5 h-3.5" />
                   <span>{isSynthesizing ? 'Synthesizing...' : 'Synthesize with Gemini'}</span>
@@ -454,16 +459,16 @@ export const EventDetail: React.FC<EventDetailProps> = ({
             )}
 
             {/* Language Sub-Tabs */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2">
-              <div className="flex items-center gap-0.5 bg-zinc-900 border border-zinc-800 p-0.5 rounded-md text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#222222] pb-2">
+              <div className="flex items-center gap-0.5 bg-[#0a0a0a] border border-[#222222] p-0.5 rounded-md text-xs">
                 {(['typescript', 'zod', 'python', 'go', 'nextjs', 'express'] as const).map((lang) => (
                   <button
                     key={lang}
                     onClick={() => setSchemaLanguage(lang)}
                     className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                       schemaLanguage === lang
-                        ? 'bg-zinc-800 text-zinc-100 shadow-sm'
-                        : 'text-zinc-400 hover:text-zinc-200'
+                        ? 'bg-white text-black font-semibold shadow-sm'
+                        : 'text-[#71717a] hover:text-white'
                     }`}
                   >
                     {lang === 'nextjs' ? 'Next.js' : lang === 'express' ? 'Express' : lang}
@@ -473,19 +478,22 @@ export const EventDetail: React.FC<EventDetailProps> = ({
 
               <button
                 onClick={() => handleCopyCode(currentSchemaCode())}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 transition-colors"
+                className="btn text-xs py-1.5 px-3"
               >
-                {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedCode ? <Check className="w-3.5 h-3.5 text-[#4ade80]" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copiedCode ? 'Copied' : 'Copy Code'}</span>
               </button>
             </div>
 
             {/* Code Box */}
-            <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 font-mono text-xs overflow-auto text-zinc-200 max-h-[500px]">
-              <pre className="whitespace-pre-wrap leading-relaxed">
-                {currentSchemaCode()}
-              </pre>
-            </div>
+            <CodeBlock
+              code={currentSchemaCode()}
+              language={schemaLanguage}
+              filename={`synthesized-schema.${schemaLanguage === 'typescript' ? 'ts' : schemaLanguage === 'zod' ? 'ts' : schemaLanguage === 'python' ? 'py' : schemaLanguage === 'go' ? 'go' : 'ts'}`}
+              showLineNumbers={true}
+              showDots={true}
+              maxHeight="max-h-[500px]"
+            />
           </div>
         )}
 
@@ -494,11 +502,11 @@ export const EventDetail: React.FC<EventDetailProps> = ({
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="md:col-span-1">
-                <label className="block text-xs font-medium text-zinc-400 mb-1">Method</label>
+                <label className="block text-xs font-medium text-[#71717a] mb-1">Method</label>
                 <select
                   value={replayMethod}
                   onChange={(e) => setReplayMethod(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-1.5 text-xs font-mono text-zinc-200 focus:outline-none focus:border-zinc-700"
+                  className="w-full bg-[#0a0a0a] border border-[#222222] rounded-md px-3 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-white"
                 >
                   <option value="POST">POST</option>
                   <option value="GET">GET</option>
@@ -510,10 +518,10 @@ export const EventDetail: React.FC<EventDetailProps> = ({
 
               <div className="md:col-span-3">
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-medium text-zinc-400">Destination URL</label>
+                  <label className="text-xs font-medium text-[#71717a]">Destination URL</label>
                   {(replayUrl.includes('localhost') || replayUrl.includes('127.0.0.1')) && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-950/50 border border-emerald-800/60 px-2 py-0.5 rounded-full">
-                      <Zap className="w-2.5 h-2.5" /> LocalBridge™ (Zero-Tunnel Direct)
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[#4ade80] bg-[#0a0a0a] border border-[#222222] px-2 py-0.5 rounded-full">
+                      <Zap className="w-2.5 h-2.5" /> LocalBridge (Direct)
                     </span>
                   )}
                 </div>
@@ -523,12 +531,12 @@ export const EventDetail: React.FC<EventDetailProps> = ({
                     value={replayUrl}
                     onChange={(e) => setReplayUrl(e.target.value)}
                     placeholder="http://localhost:3000/api/webhooks"
-                    className="flex-1 bg-zinc-900 border border-zinc-800 rounded-md px-3 py-1.5 text-xs font-mono text-zinc-200 focus:outline-none focus:border-zinc-700"
+                    className="flex-1 bg-[#0a0a0a] border border-[#222222] rounded-md px-3 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-white"
                   />
                   <button
                     onClick={handleReplay}
                     disabled={isReplaying || !replayUrl}
-                    className="flex items-center gap-1.5 px-4 py-1.5 bg-zinc-100 hover:bg-zinc-200 disabled:opacity-50 text-zinc-900 font-medium rounded-md text-xs transition-colors shrink-0"
+                    className="btn primary text-xs py-1.5 px-4 shrink-0 font-bold"
                   >
                     <Play className="w-3 h-3 fill-current" />
                     <span>{isReplaying ? 'Broadcasting...' : 'Replay'}</span>
@@ -540,54 +548,57 @@ export const EventDetail: React.FC<EventDetailProps> = ({
             {/* Editable Request Headers & Body */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1">Request Headers (JSON)</label>
+                <label className="block text-xs font-medium text-[#71717a] mb-1">Request Headers (JSON)</label>
                 <textarea
                   rows={8}
                   value={replayHeaders}
                   onChange={(e) => setReplayHeaders(e.target.value)}
-                  className="w-full bg-zinc-900/50 border border-zinc-800 rounded-lg p-3 font-mono text-xs text-zinc-200 focus:outline-none focus:border-zinc-700 resize-none"
+                  className="w-full bg-[#0a0a0a] border border-[#222222] rounded-lg p-3 font-mono text-xs text-white focus:outline-none focus:border-white resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1">Request Body (JSON / Raw)</label>
+                <label className="block text-xs font-medium text-[#71717a] mb-1">Request Body (JSON / Raw)</label>
                 <textarea
                   rows={8}
                   value={replayBody}
                   onChange={(e) => setReplayBody(e.target.value)}
-                  className="w-full bg-zinc-900/50 border border-zinc-800 rounded-lg p-3 font-mono text-xs text-zinc-200 focus:outline-none focus:border-zinc-700 resize-none"
+                  className="w-full bg-[#0a0a0a] border border-[#222222] rounded-lg p-3 font-mono text-xs text-white focus:outline-none focus:border-white resize-none"
                 />
               </div>
             </div>
 
             {/* Response Viewer */}
             {replayResult && (
-              <div className="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-900/30">
-                <div className="p-3 bg-zinc-900/80 border-b border-zinc-800 flex items-center justify-between">
+              <div className="border border-[#222222] rounded-lg overflow-hidden bg-[#0a0a0a]">
+                <div className="p-3 bg-[#0a0a0a] border-b border-[#222222] flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs font-mono">
-                    <span className="text-zinc-400">Response:</span>
+                    <span className="text-[#71717a]">Response:</span>
                     <span className={`font-semibold ${
                       replayResult.statusCode >= 200 && replayResult.statusCode < 400
-                        ? 'text-emerald-400'
-                        : 'text-red-400'
+                        ? 'text-[#4ade80]'
+                        : 'text-[#f87171]'
                     }`}>
                       {replayResult.statusCode} {replayResult.statusText}
                     </span>
-                    <span className="text-zinc-500">({replayResult.timeMs}ms)</span>
+                    <span className="text-[#71717a]">({replayResult.timeMs}ms)</span>
                   </div>
 
                   {replayResult.error && (
-                    <span className="text-xs text-red-400 font-mono">{replayResult.error}</span>
+                    <span className="text-xs text-[#f87171] font-mono">{replayResult.error}</span>
                   )}
                 </div>
 
-                <div className="p-4 font-mono text-xs text-zinc-300 max-h-60 overflow-y-auto">
-                  <pre className="whitespace-pre-wrap break-all">
-                    {typeof replayResult.body === 'object' && replayResult.body !== null
-                      ? JSON.stringify(replayResult.body, null, 2)
-                      : String(replayResult.body || (replayResult.error ? 'No response payload' : 'Empty body'))}
-                  </pre>
-                </div>
+                <CodeBlock
+                  code={typeof replayResult.body === 'object' && replayResult.body !== null
+                    ? JSON.stringify(replayResult.body, null, 2)
+                    : String(replayResult.body || (replayResult.error ? 'No response payload' : 'Empty body'))}
+                  language="json"
+                  filename={`response-${replayResult.statusCode}.json`}
+                  showLineNumbers={true}
+                  showDots={true}
+                  maxHeight="max-h-60"
+                />
               </div>
             )}
           </div>
@@ -596,68 +607,68 @@ export const EventDetail: React.FC<EventDetailProps> = ({
         {/* Tab: Signature Verifier */}
         {activeTab === 'signature' && (
           <div className="space-y-4">
-            <div className="p-3.5 rounded-lg border border-zinc-800 bg-zinc-900/40 flex items-start gap-3">
-              {event.signatureStatus === 'verified' && <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />}
-              {event.signatureStatus === 'failed' && <ShieldAlert className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />}
-              {event.signatureStatus === 'missing_secret' && <Shield className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />}
-              {event.signatureStatus === 'unsigned' && <Shield className="w-5 h-5 text-zinc-500 shrink-0 mt-0.5" />}
+            <div className="p-3.5 rounded-lg border border-[#222222] bg-[#0a0a0a] flex items-start gap-3">
+              {event.signatureStatus === 'verified' && <ShieldCheck className="w-5 h-5 text-[#4ade80] shrink-0 mt-0.5" />}
+              {event.signatureStatus === 'failed' && <ShieldAlert className="w-5 h-5 text-[#f87171] shrink-0 mt-0.5" />}
+              {event.signatureStatus === 'missing_secret' && <Shield className="w-5 h-5 text-[#fbbf24] shrink-0 mt-0.5" />}
+              {event.signatureStatus === 'unsigned' && <Shield className="w-5 h-5 text-[#71717a] shrink-0 mt-0.5" />}
 
               <div>
-                <h4 className="text-xs font-semibold text-zinc-200">
+                <h4 className="text-xs font-semibold text-white">
                   {event.signatureStatus === 'verified' && 'Signature Verified'}
                   {event.signatureStatus === 'failed' && 'Signature Verification Failed'}
                   {event.signatureStatus === 'missing_secret' && 'Signing Secret Missing'}
                   {event.signatureStatus === 'unsigned' && 'No Signature Header Detected'}
                 </h4>
-                <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
+                <p className="text-xs text-[#a1a1aa] mt-0.5 leading-relaxed">
                   {event.signatureDetails?.message || 'Signature processed according to endpoint configuration.'}
                 </p>
               </div>
             </div>
 
             {/* Cryptographic breakdown */}
-            <div className="border border-zinc-800 rounded-lg bg-zinc-900/30 p-4 space-y-3 font-mono text-xs">
-              <div className="text-xs font-semibold text-zinc-400 uppercase">Cryptographic Diagnostics</div>
+            <div className="border border-[#222222] rounded-lg bg-[#0a0a0a] p-4 space-y-3 font-mono text-xs">
+              <div className="text-xs font-semibold text-[#71717a] uppercase tracking-wider">Cryptographic Diagnostics</div>
               
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div>
-                  <span className="text-zinc-500 block text-[11px]">Provider:</span>
-                  <span className="text-zinc-200 font-medium">{event.signatureDetails?.provider || endpoint?.signatureProvider || 'Auto'}</span>
+                  <span className="text-[#71717a] block text-[11px]">Provider:</span>
+                  <span className="text-white font-medium">{event.signatureDetails?.provider || endpoint?.signatureProvider || 'Auto'}</span>
                 </div>
 
                 {event.signatureDetails?.headerName && (
                   <div>
-                    <span className="text-zinc-500 block text-[11px]">Header Name:</span>
-                    <span className="text-zinc-300">{event.signatureDetails.headerName}</span>
+                    <span className="text-[#71717a] block text-[11px]">Header Name:</span>
+                    <span className="text-white">{event.signatureDetails.headerName}</span>
                   </div>
                 )}
 
                 {event.signatureDetails?.receivedSignature && (
                   <div>
-                    <span className="text-zinc-500 block text-[11px]">Received Header:</span>
-                    <span className="text-zinc-300 break-all select-all">{event.signatureDetails.receivedSignature}</span>
+                    <span className="text-[#71717a] block text-[11px]">Received Header:</span>
+                    <span className="text-white break-all select-all">{event.signatureDetails.receivedSignature}</span>
                   </div>
                 )}
 
                 {event.signatureDetails?.expectedSignature && (
                   <div>
-                    <span className="text-zinc-500 block text-[11px]">Expected Computed Hash:</span>
-                    <span className="text-emerald-400 break-all select-all">{event.signatureDetails.expectedSignature}</span>
+                    <span className="text-[#71717a] block text-[11px]">Expected Computed Hash:</span>
+                    <span className="text-[#4ade80] break-all select-all">{event.signatureDetails.expectedSignature}</span>
                   </div>
                 )}
 
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-500 text-[11px]">Configured Secret:</span>
+                    <span className="text-[#71717a] text-[11px]">Configured Secret:</span>
                     <button
                       onClick={() => setShowSecret(!showSecret)}
-                      className="text-[11px] text-zinc-400 hover:text-zinc-200 flex items-center gap-1 font-sans"
+                      className="text-[11px] text-[#71717a] hover:text-white flex items-center gap-1 font-sans"
                     >
                       {showSecret ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                       <span>{showSecret ? 'Hide' : 'Reveal'}</span>
                     </button>
                   </div>
-                  <span className="text-zinc-300 font-mono">
+                  <span className="text-white font-mono">
                     {endpoint?.secret 
                       ? (showSecret ? endpoint.secret : '••••••••••••••••••••••••••••')
                       : 'None configured (Set secret in Endpoint settings)'}
