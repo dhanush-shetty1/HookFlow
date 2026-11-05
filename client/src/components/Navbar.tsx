@@ -280,12 +280,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* WS status */}
         <div className="hidden sm:flex items-center gap-1.5 pl-2 border-l border-[#222222] text-[10px] font-mono">
-          <div className="relative flex">
-            <span className={`w-2 h-2 rounded-full ${isWsConnected ? 'bg-[#4ade80]' : 'bg-[#71717a]'}`} />
-            {isWsConnected && (
-              <span className="absolute inset-0 rounded-full bg-[#4ade80] animate-ping opacity-60" />
-            )}
-          </div>
+          <span className={`w-2 h-2 rounded-full ${isWsConnected ? 'bg-[#4ade80]' : 'bg-[#71717a]'}`} />
           <span className={isWsConnected ? 'text-white' : 'text-[#71717a]'}>
             {isWsConnected ? `${wsLatency}ms` : 'offline'}
           </span>

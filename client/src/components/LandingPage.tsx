@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import {
   ArrowRight, ShieldCheck, Zap, Sparkles, Copy, Check,
   Lock, Cpu, RefreshCw, Globe, Activity,
-  Database, Webhook, Layers, Terminal as TerminalIcon
+  Database, Webhook, Layers, Terminal as TerminalIcon, Play
 } from 'lucide-react';
 import { BorderBeam } from './ui/BorderBeam';
 import { FeatureCard } from './ui/FeatureCard';
@@ -13,6 +13,9 @@ import { Badge } from './ui/Badge';
 import { TerminalWindow } from './ui/TerminalWindow';
 import { LiveTraceSimulator } from './LiveTraceSimulator';
 import { InteractiveFeatureGrid } from './InteractiveFeatureGrid';
+import { InteractiveVideoWalkthrough } from './InteractiveVideoWalkthrough';
+import { HeroQuickstartPill } from './HeroQuickstartPill';
+import { ProviderLogoGrid } from './ProviderLogoGrid';
 
 /* ─── Scroll-reveal wrapper ───────────────────────────────────────────── */
 const FadeUp: React.FC<{ children: React.ReactNode; delay?: number; className?: string }> = ({
@@ -305,8 +308,9 @@ export const LandingPage: React.FC = () => {
           {/* Brand */}
           <div 
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center font-bold text-sm tracking-tight text-white cursor-pointer hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 font-bold text-sm tracking-tight text-white cursor-pointer hover:opacity-80 transition-opacity"
           >
+            <span className="w-2 h-2 rounded-full bg-[#4ade80]" />
             <span>HookFlow</span>
           </div>
 
@@ -318,6 +322,14 @@ export const LandingPage: React.FC = () => {
                 className="rounded-full px-3.5 py-1.5 text-xs text-[#a1a1aa] transition-colors duration-200 hover:bg-white/10 hover:text-white"
               >
                 Tour
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => scrollToSection('providers')}
+                className="rounded-full px-3.5 py-1.5 text-xs text-[#a1a1aa] transition-colors duration-200 hover:bg-white/10 hover:text-white"
+              >
+                Providers
               </button>
             </li>
             <li>
@@ -352,14 +364,6 @@ export const LandingPage: React.FC = () => {
                 Synthesizer
               </button>
             </li>
-            <li>
-              <button
-                onClick={() => scrollToSection('providers')}
-                className="rounded-full px-3.5 py-1.5 text-xs text-[#a1a1aa] transition-colors duration-200 hover:bg-white/10 hover:text-white"
-              >
-                Providers
-              </button>
-            </li>
           </ul>
 
           {/* Right Action */}
@@ -375,24 +379,71 @@ export const LandingPage: React.FC = () => {
         </nav>
       </header>
 
-      {/* ── HERO SECTION ─────────────────────────────────────────────────── */}
-      <header className="relative pt-24 sm:pt-32 pb-16 px-4 text-center overflow-hidden min-h-[85vh] flex flex-col justify-center items-center">
+      {/* ── HERO SECTION WITH ATMOSPHERIC BACKDROP ────────────────────────── */}
+      <header className="relative pt-28 sm:pt-36 pb-20 px-4 text-center overflow-hidden min-h-[85vh] flex flex-col justify-center items-center">
+        {/* Atmospheric Twilight Backdrop (Image 1 style with mask) */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden select-none z-0">
+          <img
+            src="/images/twilight-backdrop.jpg"
+            alt=""
+            className="w-full h-full object-cover object-top opacity-25 mix-blend-screen mask-hero-fade filter brightness-90"
+          />
+          <div className="absolute inset-0 bg-radial-gradient opacity-60" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/70 to-black" />
+        </div>
+
         <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
+          {/* Eyebrow Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#111114]/90 backdrop-blur-md border border-[#27272a] text-[11px] font-mono text-[#a1a1aa] mb-6 shadow-lg"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-[#4ade80]" />
+            <span>HookFlow v1.0 · Sub-15ms Local Webhook Proxy</span>
+          </motion.div>
+
           {/* Headline */}
-          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-[1.1] mb-6 text-white max-w-3xl">
+          <motion.h1
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.1 }}
+            className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08] mb-6 text-white max-w-4xl"
+          >
             Debug Webhooks.<br />
             <span className="text-[#71717a]">Know what arrived.</span>
-          </h1>
+          </motion.h1>
 
-          <p className="text-xs sm:text-sm text-[#a1a1aa] max-w-xl mx-auto mb-8 leading-relaxed">
+          <motion.p
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.15 }}
+            className="text-xs sm:text-sm text-[#a1a1aa] max-w-xl mx-auto mb-8 leading-relaxed font-mono"
+          >
             A self-hosted developer proxy for capturing raw webhook signals — sub-15ms WebSocket live streaming, cryptographic HMAC verification, and instant schema synthesis.
-          </p>
+          </motion.p>
+
+          {/* Elf-Style Quickstart Pill (Image 2 style) */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="w-full mb-8"
+          >
+            <HeroQuickstartPill />
+          </motion.div>
 
           {/* CTA Buttons */}
-          <div className="flex flex-wrap items-center justify-center gap-3 mb-12">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.25 }}
+            className="flex flex-wrap items-center justify-center gap-3"
+          >
             <button
               onClick={() => navigate('/console')}
-              className="btn primary text-xs py-2 px-4 font-semibold"
+              className="btn primary text-xs py-2 px-4 font-semibold shadow-md"
             >
               <span>Open Console</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -409,14 +460,36 @@ export const LandingPage: React.FC = () => {
                 {cmdCopied ? <Check className="w-3.5 h-3.5 text-[#4ade80]" /> : <Copy className="w-3.5 h-3.5" />}
               </span>
             </button>
-          </div>
-
-          {/* ── Interactive Live Trace Simulator ─── */}
-          <div id="live-tour" className="w-full relative mt-4">
-            <LiveTraceSimulator />
-          </div>
+          </motion.div>
         </div>
       </header>
+
+      {/* ── AUTONOMOUS PRODUCT WALKTHROUGH & LIVE PIPELINE DISPLAY ────────── */}
+      <section id="live-tour" className="py-20 px-4 max-w-6xl mx-auto scroll-mt-20">
+        <FadeUp>
+          <div className="text-center mb-10">
+            <div className="eyebrow mb-2">01 / Pipeline Telemetry</div>
+            <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-white mb-3">
+              Real-Time Webhook Lifecycle
+            </h2>
+            <p className="text-xs sm:text-sm text-[#a1a1aa] max-w-xl mx-auto leading-relaxed">
+              Continuous demonstration of edge ingress, constant-time HMAC cryptographic verification, AST schema synthesis, and localhost replaying.
+            </p>
+          </div>
+
+          {/* Autonomous Video Display without loader or switcher */}
+          <div className="w-full relative">
+            <InteractiveVideoWalkthrough />
+          </div>
+        </FadeUp>
+      </section>
+
+      {/* ── SUPPORTED PROVIDERS GRID (Image 1 6x2 layout) ──────────────────── */}
+      <section id="providers" className="py-20 px-4 max-w-6xl mx-auto border-t border-[#222222] scroll-mt-20">
+        <FadeUp>
+          <ProviderLogoGrid />
+        </FadeUp>
+      </section>
 
       {/* ── DEVELOPER CLI & ORIGIN TERMINAL ──────────────────────────────── */}
       <section id="cli" className="py-16 px-4 max-w-4xl mx-auto text-center scroll-mt-20">
@@ -749,18 +822,26 @@ export const LandingPage: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-white">JSON Payload</span>
-                <div className="flex items-center bg-[#0a0a0a] border border-[#222222] rounded p-0.5">
-                  {(['stripe', 'github', 'shopify'] as ProviderKey[]).map(p => (
-                    <button
-                      key={p}
-                      onClick={() => handleSynthProvider(p)}
-                      className={`px-2.5 py-1 rounded text-[10px] font-mono capitalize transition-all ${
-                        synthProvider === p ? 'bg-white text-black font-semibold' : 'text-[#71717a] hover:text-white'
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ))}
+                <div className="flex items-center bg-[#0a0a0a] border border-[#222222] rounded p-0.5 gap-1">
+                  {(['stripe', 'github', 'shopify'] as ProviderKey[]).map(p => {
+                    const isSelected = synthProvider === p;
+                    const pColor = p === 'stripe' ? '#635bff' : p === 'github' ? '#a855f7' : '#95bf47';
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => handleSynthProvider(p)}
+                        className="px-2.5 py-1 rounded text-[10px] font-mono capitalize transition-all border"
+                        style={{
+                          color: isSelected ? '#ffffff' : '#71717a',
+                          backgroundColor: isSelected ? `${pColor}25` : 'transparent',
+                          borderColor: isSelected ? pColor : 'transparent',
+                          fontWeight: isSelected ? 600 : 400,
+                        }}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -781,18 +862,26 @@ export const LandingPage: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-white">Generated Code</span>
-                <div className="flex items-center bg-[#0a0a0a] border border-[#222222] rounded p-0.5">
-                  {(['typescript', 'zod', 'nextjs'] as SchemaKey[]).map(s => (
-                    <button
-                      key={s}
-                      onClick={() => setSynthSchema(s)}
-                      className={`px-2.5 py-1 rounded text-[10px] font-mono transition-all ${
-                        synthSchema === s ? 'bg-white text-black font-semibold' : 'text-[#71717a] hover:text-white'
-                      }`}
-                    >
-                      {s === 'typescript' ? 'TypeScript' : s === 'zod' ? 'Zod Schema' : 'Next.js'}
-                    </button>
-                  ))}
+                <div className="flex items-center bg-[#0a0a0a] border border-[#222222] rounded p-0.5 gap-1">
+                  {(['typescript', 'zod', 'nextjs'] as SchemaKey[]).map(s => {
+                    const isSelected = synthSchema === s;
+                    const sColor = s === 'typescript' ? '#38bdf8' : s === 'zod' ? '#818cf8' : '#ffffff';
+                    return (
+                      <button
+                        key={s}
+                        onClick={() => setSynthSchema(s)}
+                        className="px-2.5 py-1 rounded text-[10px] font-mono transition-all border"
+                        style={{
+                          color: isSelected ? '#ffffff' : '#71717a',
+                          backgroundColor: isSelected ? `${sColor}20` : 'transparent',
+                          borderColor: isSelected ? sColor : 'transparent',
+                          fontWeight: isSelected ? 600 : 400,
+                        }}
+                      >
+                        {s === 'typescript' ? 'TypeScript' : s === 'zod' ? 'Zod Schema' : 'Next.js'}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -817,44 +906,6 @@ export const LandingPage: React.FC = () => {
                 <Badge variant="outline">Copy &amp; paste</Badge>
               </div>
             </div>
-          </div>
-        </FadeUp>
-      </section>
-
-      {/* ── PROVIDERS ────────────────────────────────────────────────────── */}
-      <section id="providers" className="py-20 px-4 max-w-6xl mx-auto border-t border-[#222222] scroll-mt-20">
-        <FadeUp>
-          <div className="mb-10 text-left">
-            <div className="eyebrow mb-2">Supported Integrations</div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-2">Supported Providers</h2>
-            <p className="text-xs text-[#a1a1aa]">Pre-configured HMAC signing schemes and mock payloads for every major service.</p>
-          </div>
-        </FadeUp>
-
-        <FadeUp delay={0.1}>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { name: 'Stripe', header: 'stripe-signature', algo: 'HMAC-SHA256 (t+v1)', dot: 'bg-[#4ade80]' },
-              { name: 'GitHub', header: 'x-hub-signature-256', algo: 'HMAC-SHA256', dot: 'bg-white' },
-              { name: 'Shopify', header: 'x-shopify-hmac-sha256', algo: 'Base64 HMAC', dot: 'bg-white' },
-              { name: 'Clerk / Svix', header: 'svix-signature', algo: 'Base64 HMAC-SHA256', dot: 'bg-white' },
-              { name: 'Twilio', header: 'x-twilio-signature', algo: 'HMAC-SHA1', dot: 'bg-[#f87171]' },
-              { name: 'Discord', header: 'x-signature-ed25519', algo: 'Ed25519', dot: 'bg-white' },
-              { name: 'Slack', header: 'x-slack-signature', algo: 'v0=HMAC-SHA256', dot: 'bg-[#4ade80]' },
-              { name: 'Custom HMAC', header: 'x-signature', algo: 'Custom Secret', dot: 'bg-[#71717a]' },
-            ].map(item => (
-              <div
-                key={item.name}
-                className="p-4 rounded-lg border border-[#222222] bg-[#0a0a0a] hover:border-[#444444] transition-all duration-150 hover:-translate-y-0.5 cursor-default select-none"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${item.dot}`} />
-                  <span className="font-semibold text-xs text-white">{item.name}</span>
-                </div>
-                <div className="text-[10px] font-mono text-[#71717a] truncate">{item.header}</div>
-                <div className="text-[10px] text-[#71717a] mt-0.5">{item.algo}</div>
-              </div>
-            ))}
           </div>
         </FadeUp>
       </section>

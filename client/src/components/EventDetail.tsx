@@ -27,6 +27,35 @@ interface EventDetailProps {
   onEventUpdated?: (updated: WebhookEvent) => void;
 }
 
+const getProviderMeta = (event: WebhookEvent) => {
+  const headers = event.headers || {};
+  const path = (event.path || '').toLowerCase();
+  const bodyStr = typeof event.body === 'object' ? JSON.stringify(event.body).toLowerCase() : '';
+
+  if (headers['stripe-signature'] || path.includes('stripe') || bodyStr.includes('payment_intent')) {
+    return { name: 'Stripe', color: '#635bff', bg: 'rgba(99, 91, 255, 0.15)', border: 'rgba(99, 91, 255, 0.4)' };
+  }
+  if (headers['x-hub-signature-256'] || headers['x-github-event'] || path.includes('github') || bodyStr.includes('commits')) {
+    return { name: 'GitHub', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)', border: 'rgba(168, 85, 247, 0.4)' };
+  }
+  if (headers['x-shopify-hmac-sha256'] || path.includes('shopify') || bodyStr.includes('total_price')) {
+    return { name: 'Shopify', color: '#95bf47', bg: 'rgba(149, 191, 71, 0.15)', border: 'rgba(149, 191, 71, 0.4)' };
+  }
+  if (headers['svix-signature'] || path.includes('clerk') || bodyStr.includes('user_2n')) {
+    return { name: 'Clerk', color: '#6c47ff', bg: 'rgba(108, 71, 255, 0.15)', border: 'rgba(108, 71, 255, 0.4)' };
+  }
+  if (headers['x-twilio-signature'] || path.includes('twilio')) {
+    return { name: 'Twilio', color: '#f22f46', bg: 'rgba(242, 47, 70, 0.15)', border: 'rgba(242, 47, 70, 0.4)' };
+  }
+  if (headers['x-slack-signature'] || path.includes('slack')) {
+    return { name: 'Slack', color: '#ecb22e', bg: 'rgba(236, 178, 46, 0.15)', border: 'rgba(236, 178, 46, 0.4)' };
+  }
+  if (headers['x-signature-ed25519'] || path.includes('discord')) {
+    return { name: 'Discord', color: '#5865f2', bg: 'rgba(88, 101, 242, 0.15)', border: 'rgba(88, 101, 242, 0.4)' };
+  }
+  return { name: 'Webhook', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.15)', border: 'rgba(56, 189, 248, 0.4)' };
+};
+
 export const EventDetail: React.FC<EventDetailProps> = ({
   event,
   endpoint,
@@ -200,6 +229,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({
     }
   };
 
+  const prov = getProviderMeta(event);
+
   return (
     <div className="flex-1 flex flex-col h-[calc(100vh-56px)] bg-black overflow-hidden font-mono text-[#e4e4e7]">
       {/* Event Header Banner */}
@@ -207,6 +238,17 @@ export const EventDetail: React.FC<EventDetailProps> = ({
         <div className="flex items-center gap-3">
           <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-[#0a0a0a] border border-[#222222] text-white uppercase">
             {event.method}
+          </span>
+          <span
+            className="px-2 py-0.5 rounded text-xs font-mono font-semibold border flex items-center gap-1.5"
+            style={{
+              color: prov.color,
+              backgroundColor: prov.bg,
+              borderColor: prov.border,
+            }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: prov.color }} />
+            {prov.name}
           </span>
           <div>
             <div className="flex items-center gap-2">
@@ -461,19 +503,31 @@ export const EventDetail: React.FC<EventDetailProps> = ({
             {/* Language Sub-Tabs */}
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#222222] pb-2">
               <div className="flex items-center gap-0.5 bg-[#0a0a0a] border border-[#222222] p-0.5 rounded-md text-xs">
-                {(['typescript', 'zod', 'python', 'go', 'nextjs', 'express'] as const).map((lang) => (
-                  <button
-                    key={lang}
-                    onClick={() => setSchemaLanguage(lang)}
-                    className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                      schemaLanguage === lang
-                        ? 'bg-white text-black font-semibold shadow-sm'
-                        : 'text-[#71717a] hover:text-white'
-                    }`}
-                  >
-                    {lang === 'nextjs' ? 'Next.js' : lang === 'express' ? 'Express' : lang}
-                  </button>
-                ))}
+                {(['typescript', 'zod', 'python', 'go', 'nextjs', 'express'] as const).map((lang) => {
+                  const isSelected = schemaLanguage === lang;
+                  const langColorClass = () => {
+                    if (!isSelected) return 'text-[#71717a] hover:text-white';
+                    switch (lang) {
+                      case 'typescript': return 'text-[#38bdf8] bg-[#38bdf8]/15 border border-[#38bdf8]/40 font-semibold';
+                      case 'zod': return 'text-[#818cf8] bg-[#818cf8]/15 border border-[#818cf8]/40 font-semibold';
+                      case 'python': return 'text-[#facc15] bg-[#facc15]/15 border border-[#facc15]/40 font-semibold';
+                      case 'go': return 'text-[#22d3ee] bg-[#22d3ee]/15 border border-[#22d3ee]/40 font-semibold';
+                      case 'nextjs': return 'text-white bg-white/15 border border-white/40 font-semibold';
+                      case 'express': return 'text-white bg-white/15 border border-white/40 font-semibold';
+                      default: return 'text-white bg-white/15 border border-white/40 font-semibold';
+                    }
+                  };
+
+                  return (
+                    <button
+                      key={lang}
+                      onClick={() => setSchemaLanguage(lang)}
+                      className={`px-2.5 py-1 rounded text-xs transition-colors ${langColorClass()}`}
+                    >
+                      {lang === 'nextjs' ? 'Next.js' : lang === 'express' ? 'Express' : lang}
+                    </button>
+                  );
+                })}
               </div>
 
               <button

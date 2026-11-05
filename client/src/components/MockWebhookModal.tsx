@@ -11,6 +11,19 @@ interface MockWebhookModalProps {
   onMockSent: () => void;
 }
 
+const getProviderColor = (provider: string) => {
+  switch ((provider || '').toLowerCase()) {
+    case 'stripe': return { color: '#635bff', bg: 'rgba(99, 91, 255, 0.12)', border: 'rgba(99, 91, 255, 0.4)' };
+    case 'github': return { color: '#a855f7', bg: 'rgba(168, 85, 247, 0.12)', border: 'rgba(168, 85, 247, 0.4)' };
+    case 'shopify': return { color: '#95bf47', bg: 'rgba(149, 191, 71, 0.12)', border: 'rgba(149, 191, 71, 0.4)' };
+    case 'clerk': return { color: '#6c47ff', bg: 'rgba(108, 71, 255, 0.12)', border: 'rgba(108, 71, 255, 0.4)' };
+    case 'twilio': return { color: '#f22f46', bg: 'rgba(242, 47, 70, 0.12)', border: 'rgba(242, 47, 70, 0.4)' };
+    case 'slack': return { color: '#ecb22e', bg: 'rgba(236, 178, 46, 0.12)', border: 'rgba(236, 178, 46, 0.4)' };
+    case 'discord': return { color: '#5865f2', bg: 'rgba(88, 101, 242, 0.12)', border: 'rgba(88, 101, 242, 0.4)' };
+    default: return { color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.12)', border: 'rgba(56, 189, 248, 0.4)' };
+  }
+};
+
 export const MockWebhookModal: React.FC<MockWebhookModalProps> = ({
   isOpen,
   onClose,
@@ -105,25 +118,37 @@ export const MockWebhookModal: React.FC<MockWebhookModalProps> = ({
               Template
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {templates.map((tpl) => (
-                <button
-                  key={tpl.id}
-                  onClick={() => setSelectedTemplateId(tpl.id)}
-                  className={`p-3 rounded-lg border text-left transition-colors ${
-                    selectedTemplateId === tpl.id
-                      ? 'bg-[#141414] border-white text-white shadow-sm'
-                      : 'bg-black border-[#222222] text-[#71717a] hover:border-[#444444] hover:text-white'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-xs text-white">{tpl.name}</span>
-                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-[#0a0a0a] text-white border border-[#222222]">
-                      {tpl.provider}
-                    </span>
-                  </div>
-                  <p className="text-[11px] font-mono text-[#71717a] truncate">{tpl.event}</p>
-                </button>
-              ))}
+              {templates.map((tpl) => {
+                const prov = getProviderColor(tpl.provider);
+                const isSelected = selectedTemplateId === tpl.id;
+
+                return (
+                  <button
+                    key={tpl.id}
+                    onClick={() => setSelectedTemplateId(tpl.id)}
+                    className="p-3 rounded-lg border text-left transition-all relative overflow-hidden"
+                    style={{
+                      backgroundColor: isSelected ? prov.bg : '#000000',
+                      borderColor: isSelected ? prov.border : '#222222',
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-xs text-white">{tpl.name}</span>
+                      <span
+                        className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded border"
+                        style={{
+                          color: prov.color,
+                          borderColor: prov.border,
+                          backgroundColor: '#0a0a0c',
+                        }}
+                      >
+                        {tpl.provider}
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-mono text-[#71717a] truncate">{tpl.event}</p>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

@@ -53,13 +53,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const getMethodBadge = (method: string) => {
     switch (method.toUpperCase()) {
-      case 'POST': return 'bg-[#0a0a0a] text-white border-[#222222]';
-      case 'GET': return 'bg-[#0a0a0a] text-[#4ade80] border-[#222222]';
-      case 'PUT': return 'bg-[#0a0a0a] text-white border-[#222222]';
-      case 'PATCH': return 'bg-[#0a0a0a] text-white border-[#222222]';
-      case 'DELETE': return 'bg-[#0a0a0a] text-[#f87171] border-[#222222]';
+      case 'POST': return 'bg-[#0b1710] text-[#4ade80] border-[#164e28]';
+      case 'GET': return 'bg-[#091520] text-[#38bdf8] border-[#0c4a6e]';
+      case 'PUT': return 'bg-[#181208] text-[#fbbf24] border-[#78350f]';
+      case 'PATCH': return 'bg-[#181208] text-[#fbbf24] border-[#78350f]';
+      case 'DELETE': return 'bg-[#180b0b] text-[#f87171] border-[#7f1d1d]';
       default: return 'bg-[#0a0a0a] text-[#71717a] border-[#222222]';
     }
+  };
+
+  const getProviderMeta = (event: WebhookEvent) => {
+    const headers = event.headers || {};
+    const path = (event.path || '').toLowerCase();
+    const bodyStr = typeof event.body === 'object' ? JSON.stringify(event.body).toLowerCase() : '';
+
+    if (headers['stripe-signature'] || path.includes('stripe') || bodyStr.includes('payment_intent')) {
+      return { name: 'Stripe', color: '#635bff', bg: 'rgba(99, 91, 255, 0.15)', border: 'rgba(99, 91, 255, 0.4)' };
+    }
+    if (headers['x-hub-signature-256'] || headers['x-github-event'] || path.includes('github') || bodyStr.includes('commits')) {
+      return { name: 'GitHub', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)', border: 'rgba(168, 85, 247, 0.4)' };
+    }
+    if (headers['x-shopify-hmac-sha256'] || path.includes('shopify') || bodyStr.includes('total_price')) {
+      return { name: 'Shopify', color: '#95bf47', bg: 'rgba(149, 191, 71, 0.15)', border: 'rgba(149, 191, 71, 0.4)' };
+    }
+    if (headers['svix-signature'] || path.includes('clerk') || bodyStr.includes('user_2n')) {
+      return { name: 'Clerk', color: '#6c47ff', bg: 'rgba(108, 71, 255, 0.15)', border: 'rgba(108, 71, 255, 0.4)' };
+    }
+    if (headers['x-twilio-signature'] || path.includes('twilio')) {
+      return { name: 'Twilio', color: '#f22f46', bg: 'rgba(242, 47, 70, 0.15)', border: 'rgba(242, 47, 70, 0.4)' };
+    }
+    if (headers['x-slack-signature'] || path.includes('slack')) {
+      return { name: 'Slack', color: '#ecb22e', bg: 'rgba(236, 178, 46, 0.15)', border: 'rgba(236, 178, 46, 0.4)' };
+    }
+    if (headers['x-signature-ed25519'] || path.includes('discord')) {
+      return { name: 'Discord', color: '#5865f2', bg: 'rgba(88, 101, 242, 0.15)', border: 'rgba(88, 101, 242, 0.4)' };
+    }
+    return { name: 'Webhook', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.15)', border: 'rgba(56, 189, 248, 0.4)' };
   };
 
   const formatRelativeTime = (timestamp: number) => {
@@ -130,21 +159,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           filteredEvents.map((event) => {
             const isSelected = selectedEvent?.id === event.id;
+            const prov = getProviderMeta(event);
+
             return (
               <div
                 key={event.id}
                 onClick={() => onSelectEvent(event)}
-                className={`p-3 cursor-pointer transition-colors ${
+                className={`p-3 cursor-pointer transition-all border-l-2 ${
                   isSelected
-                    ? 'bg-[#141414] border-l-2 border-l-white'
-                    : 'hover:bg-[#0a0a0a]'
+                    ? 'bg-[#141416]'
+                    : 'border-l-transparent hover:bg-[#0a0a0c]'
                 }`}
+                style={{
+                  borderLeftColor: isSelected ? prov.color : 'transparent',
+                }}
               >
-                {/* Method, Path, Time */}
+                {/* Method, Provider pill, Path, Time */}
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border uppercase ${getMethodBadge(event.method)}`}>
                       {event.method}
+                    </span>
+                    <span
+                      className="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold border"
+                      style={{
+                        color: prov.color,
+                        backgroundColor: prov.bg,
+                        borderColor: prov.border,
+                      }}
+                    >
+                      {prov.name}
                     </span>
                     <span className="font-mono text-xs text-white truncate font-medium">
                       {event.path}
